@@ -3,3 +3,8 @@ env.php
 .env
 .env.local
 *.log
+
+# Ignore Android build tools cache
+mobile-app/sdk/
+mobile-app/build/
+mobile-app/out/
