@@ -26,7 +26,12 @@ class BlackoutEngine {
 
     public static function recordMutation($table, $operation, $data, $txId = null) {
         if (!$txId) {
-            $txId = 'tx_' . bin2hex(random_bytes(8)) . '_' . time();
+            $rand = function_exists('random_bytes') 
+                ? bin2hex(random_bytes(8)) 
+                : (function_exists('openssl_random_pseudo_bytes') 
+                    ? bin2hex(openssl_random_pseudo_bytes(8)) 
+                    : substr(md5(uniqid((string)mt_rand(), true)), 0, 16));
+            $txId = 'tx_' . $rand . '_' . time();
         }
 
         $entry = array(
