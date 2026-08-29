@@ -1,0 +1,5 @@
+# Ignore sensitive environment credentials
+env.php
+.env
+.env.local
+*.log

@@ -11,6 +11,9 @@ if (!defined('FASAL_ROOT')) {
     define('FASAL_ROOT', __DIR__);
 }
 
+// Load local environment credentials if present
+$env = file_exists(__DIR__ . '/env.php') ? (include __DIR__ . '/env.php') : array();
+
 // Start Secure Session with extended lifetime
 if (session_status() === PHP_SESSION_NONE) {
     @ini_set('session.cookie_httponly', 1);
@@ -54,16 +57,16 @@ return array(
     // 3. MySQL Database Configuration (Self-Migrating)
     // ----------------------------------------------------------------
     'database' => array(
-        'host'     => '127.0.0.1',
-        'port'     => 3306,
-        'dbname'   => 'fasal_agritech',
-        'username' => 'root',
-        'password' => '',
+        'host'     => isset($env['db_host']) ? $env['db_host'] : '127.0.0.1',
+        'port'     => isset($env['db_port']) ? $env['db_port'] : 3306,
+        'dbname'   => isset($env['db_name']) ? $env['db_name'] : 'u155978661_sanjivani',
+        'username' => isset($env['db_user']) ? $env['db_user'] : 'u155978661_sanjivani',
+        'password' => isset($env['db_pass']) ? $env['db_pass'] : '',
         'charset'  => 'utf8mb4',
     ),
 
     // ----------------------------------------------------------------
-    // 4. Hybrid Cryptography Keys (AES-256-GCM + HMAC SHA-256)
+    // 4. Hybrid Cryptography Keys (AES-256-CBC + HMAC SHA-256)
     // ----------------------------------------------------------------
     'crypto' => array(
         // 32-byte secret encryption key
@@ -77,8 +80,8 @@ return array(
     // ----------------------------------------------------------------
     // Setup at: https://console.cloud.google.com/apis/credentials
     'google_oauth' => array(
-        'client_id'     => 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
-        'client_secret' => 'YOUR_GOOGLE_CLIENT_SECRET',
+        'client_id'     => isset($env['google_client_id']) ? $env['google_client_id'] : 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+        'client_secret' => isset($env['google_client_secret']) ? $env['google_client_secret'] : 'YOUR_GOOGLE_CLIENT_SECRET',
         'redirect_uri'  => $baseUrl . '/auth?action=google_callback',
     ),
 
@@ -87,8 +90,8 @@ return array(
     // ----------------------------------------------------------------
     // Get FREE API Key at: https://aistudio.google.com/
     'gemini_api' => array(
-        'api_key'  => 'YOUR_GEMINI_API_KEY_HERE',
-        'model'    => 'gemini-1.5-flash',
+        'api_key'  => isset($env['gemini_api_key']) ? $env['gemini_api_key'] : 'YOUR_GEMINI_API_KEY_HERE',
+        'model'    => isset($env['gemini_model']) ? $env['gemini_model'] : 'gemini-1.5-flash',
         'endpoint' => 'https://generativelanguage.googleapis.com/v1beta/models/',
     ),
 
@@ -111,9 +114,9 @@ return array(
         'port'       => 587,
         'secure'     => 'tls', // 'tls' or 'ssl'
         'auth'       => true,
-        'username'   => 'your-email@gmail.com',
-        'password'   => 'your-16-char-app-password',
-        'from_email' => 'no-reply@fasal-agri.in',
+        'username'   => isset($env['smtp_user']) ? $env['smtp_user'] : 'your-email@gmail.com',
+        'password'   => isset($env['smtp_pass']) ? $env['smtp_pass'] : 'your-app-password',
+        'from_email' => isset($env['smtp_from']) ? $env['smtp_from'] : 'no-reply@fasal-agri.in',
         'from_name'  => 'FASAL Farmer Advisory',
     ),
 
