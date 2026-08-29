@@ -1,0 +1,8 @@
+COMMON THREAD
+Every PS in this track solves the same underlying problem from a different angle — a farmer's critical data (weather, soil, groundwater, pests, prices, schemes, labour, credit, livestock) lives in scattered, disconnected systems, so decisions get made late or blind. Every solution converges on:
+aggregate scattered data → generate a timely, localized, actionable advisory → close the loop with real-world action (irrigation, selling, booking, applying).
+
+SUPER PROBLEM STATEMENT
+Unified Farmer Decision-Intelligence & Advisory Platform
+
+Design and build a single farmer-facing platform that pulls together at least three of the following data streams — weather/climate risk, soil & groundwater status, crop/pest health, market prices, farm labour & machinery availability, and government schemes/FPO or livestock data — into one coherent, timely advisory using live, historical, or simulated data. The platform must translate raw, fragmented data into a specific, localized, and actionable recommendation that a farmer can realistically use in their next decision cycle (what to plant, when to irrigate, when to spray, when to sell, who to call for labour), not just a dashboard of numbers. Solutions must work for low-literacy, low-connectivity users (voice/multilingual/offline-friendly UX is a strong plus) and should show a clear before/after: how a farmer's decision-making changes with your tool versus without it.
