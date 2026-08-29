@@ -1,0 +1,8 @@
+Push Data from ESP8266 to Web Server
+https://www.ashishvegan.com/apps/kopargaon/post-data.php
+
+Receive Data from Web Server to Web Dashboard
+https://www.ashishvegan.com/apps/kopargaon/get-data.php
+
+Device Hash ID: KOPARGAON_ESP8266_001
+
