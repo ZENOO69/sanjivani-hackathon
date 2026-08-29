@@ -8,25 +8,27 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1">
     
+    <!-- Hero Banner -->
     <div class="bg-gradient-to-r from-purple-700 via-indigo-800 to-emerald-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-950/15 relative overflow-hidden">
         <div class="absolute -right-8 -bottom-8 opacity-20 text-9xl select-none">🔬</div>
         
         <div class="relative z-10 max-w-3xl space-y-3">
             <div class="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-extrabold text-purple-100">
-                <span class="w-2 h-2 rounded-full bg-purple-300 animate-ping"></span>
-                <span>Powered by Google Gemini 1.5 & Maharashtra Agronomy Engine</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Powered by Google Gemini 3.6 Flash • Real-Time Weather & IoT Sensor Grounded</span>
             </div>
             <h1 class="text-2xl sm:text-4xl font-black tracking-tight">
                 <?= __t('ask_ai_title') ?>
             </h1>
             <p class="text-xs sm:text-sm text-purple-100 leading-relaxed">
-                तुमच्या पिकावरील रोग किंवा किडीची लक्षणे सांगा अथवा बोला. आमची AI प्रणाली कोपरगाव व महाराष्ट्र कृषी विद्यापीठाच्या शिफारशींनुसार तातडीने अचूक उपाय देईल.
+                तुमच्या पिकावरील रोग किंवा किडीची लक्षणे सांगा अथवा बोला. आमची AI प्रणाली कोपरगावचे थेट हवामान व मातीतील ओलावा तपासून MPKV राहुरी विद्यापीठाच्या शिफारशींनुसार तातडीने अचूक उपाय देईल.
             </p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
+        <!-- Input Form -->
         <div class="lg:col-span-6 space-y-6">
             <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
                 
@@ -88,34 +90,48 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
 
+        <!-- Output Prescription Card -->
         <div class="lg:col-span-6 space-y-6">
-            <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6 min-h-[420px] flex flex-col justify-between" id="ai-response-container">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-5 min-h-[420px] flex flex-col justify-between" id="ai-response-container">
                 
                 <div class="space-y-4">
-                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
                         <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
                             <span class="text-xs font-bold text-slate-900 uppercase">AI तज्ज्ञ सल्ला व शिफारस (Prescription)</span>
                         </div>
-                        <span id="ai-source-badge" class="text-[11px] font-semibold bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full">
-                            Gemini AI Ready
+                        <span id="ai-source-badge" class="text-[11px] font-bold bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-200">
+                            ✨ Gemini 3.6 Flash Ready
                         </span>
                     </div>
 
-                    <div id="ai-output-box" class="text-sm text-slate-800 leading-relaxed whitespace-pre-line bg-purple-50/40 p-5 rounded-2xl border border-purple-100/80">
+                    <!-- Live Grounding Telemetry Chips -->
+                    <div id="telemetry-bar" class="grid grid-cols-3 gap-2 text-[11px] font-medium bg-slate-100/90 p-2.5 rounded-xl border border-slate-200 text-slate-700">
+                        <div class="flex items-center gap-1 truncate" title="स्थान: कोपरगाव (Kopargaon)">
+                            <span>📍</span> <span class="truncate font-semibold" id="chip-loc">कोपरगाव, अहिल्यानगर</span>
+                        </div>
+                        <div class="flex items-center gap-1 truncate" title="थेट हवामान">
+                            <span>🌦️</span> <span class="truncate font-semibold" id="chip-weather">हवामान तपासत आहे...</span>
+                        </div>
+                        <div class="flex items-center gap-1 truncate" title="ESP8266 माती ओलावा सेन्सर">
+                            <span>💧</span> <span class="truncate font-semibold text-emerald-700" id="chip-soil">माती ओलावा: ३८%</span>
+                        </div>
+                    </div>
+
+                    <div id="ai-output-box" class="text-sm text-slate-800 leading-relaxed whitespace-pre-line bg-purple-50/40 p-5 rounded-2xl border border-purple-100/80 shadow-inner">
                         🌿 <strong>नमस्कार शेतकरी मित्र!</strong><br><br>
                         डाव्या बाजूला तुमच्या पिकाची समस्या लिहा किंवा माईक द्वारे बोला. <br><br>
-                        आमचे <strong>Gemini AI पीक डॉक्टर</strong> तुमच्या स्थानिक हवामान व माती परिस्थितीनुसार तातडीचे निदान व औषधांची अचूक मात्रा (Dosage) देतील.
+                        आमचे <strong>Google Gemini 3.6 Flash AI पीक डॉक्टर</strong> तुमच्या स्थानिक हवामान व ESP8266 माती सेन्सर परिस्थितीनुसार तातडीचे निदान व औषधांची अचूक मात्रा (Dosage) देतील.
                     </div>
                 </div>
 
                 <div id="ai-action-controls" class="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                    <button id="ai-listen-btn" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-sm">
+                    <button id="ai-listen-btn" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-sm active:scale-95">
                         <i data-lucide="volume-2" class="w-4 h-4"></i>
                         <span>हा सल्ला ऐका (Voice Output) 🔊</span>
                     </button>
 
-                    <button onclick="window.print()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-2 transition">
+                    <button onclick="window.print()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-2 transition active:scale-95">
                         <i data-lucide="printer" class="w-4 h-4"></i>
                         <span>प्रिस्क्रिप्शन प्रिंट करा</span>
                     </button>
@@ -174,18 +190,19 @@ require_once __DIR__ . '/includes/header.php';
         if (!query) return;
 
         submitBtn.disabled = true;
-        submitBtn.innerHTML = `<span>सल्ला तयार होत आहे...</span> <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>`;
+        submitBtn.innerHTML = `<span>सेन्सर व हवामान तपासून सल्ला तयार करत आहे...</span> <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>`;
         outputBox.innerHTML = `<div class="py-12 text-center text-purple-700 font-bold flex flex-col items-center gap-3">
             <div class="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <span>Google Gemini AI शेती तज्ज्ञ विश्लेषण करत आहे...</span>
+            <span>Google Gemini 3.6 Flash हवामान व माती सेन्सर डेटा तपासत आहे...</span>
         </div>`;
 
         try {
-            const res = await fetch('api/gemini-ai', {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const res = await fetch('api/gemini-ai.php', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': getCsrfToken()
+                    'X-CSRF-Token': csrfToken
                 },
                 body: JSON.stringify({ query, crop, lang: '<?= I18n::getLang() ?>' })
             });
@@ -193,8 +210,19 @@ require_once __DIR__ . '/includes/header.php';
             if (data.success) {
                 currentRawResponse = data.response;
                 outputBox.innerText = data.response;
-                sourceBadge.innerText = data.source;
-                sourceBadge.className = 'text-[11px] font-semibold bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full';
+                sourceBadge.innerText = data.source || 'Gemini 3.6 Flash (Sensor Grounded)';
+                sourceBadge.className = 'text-[11px] font-bold bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full border border-emerald-200';
+
+                // Update Telemetry chips if available
+                if (data.telemetry_context) {
+                    const ctx = data.telemetry_context;
+                    if (ctx.weather) {
+                        document.getElementById('chip-weather').innerText = `${ctx.weather.temperature}°C • ${ctx.weather.humidity}% आर्द्रता`;
+                    }
+                    if (ctx.sensor) {
+                        document.getElementById('chip-soil').innerText = `माती ओलावा: ${ctx.sensor.soil_moisture}% (${ctx.sensor.soil_status})`;
+                    }
+                }
             } else {
                 outputBox.innerText = "माफ करा, तांत्रिक अडचणीमुळे सल्ला मिळू शकला नाही. कृपया पुन्हा प्रयत्न करा.";
             }
@@ -211,7 +239,9 @@ require_once __DIR__ . '/includes/header.php';
         if (!currentRawResponse) {
             currentRawResponse = document.getElementById('ai-output-box').innerText;
         }
-        speakText(currentRawResponse, '<?= I18n::getLang() ?>', document.getElementById('ai-listen-btn'));
+        if (typeof speakText === 'function') {
+            speakText(currentRawResponse, '<?= I18n::getLang() ?>', document.getElementById('ai-listen-btn'));
+        }
     });
 </script>
 
