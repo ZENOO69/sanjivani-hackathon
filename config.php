@@ -62,7 +62,7 @@ return array(
     ),
     'gemini_api' => array(
         'api_key'  => isset($env['gemini_api_key']) ? $env['gemini_api_key'] : 'YOUR_GEMINI_API_KEY_HERE',
-        'model'    => isset($env['gemini_model']) ? $env['gemini_model'] : 'gemini-1.5-flash',
+        'model'    => isset($env['gemini_model']) ? $env['gemini_model'] : 'gemini-3.6-flash',
         'endpoint' => 'https://generativelanguage.googleapis.com/v1beta/models/',
     ),
     'weather_api' => array(

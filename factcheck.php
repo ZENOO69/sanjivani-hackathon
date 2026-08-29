@@ -311,7 +311,10 @@ document.getElementById('factCheckForm').addEventListener('submit', async functi
                     <div class="flex items-center gap-2">
                         <span class="text-xl">🛡️</span>
                         <div>
-                            <h3 class="font-extrabold text-base sm:text-lg">${verdictTitle}</h3>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-extrabold text-base sm:text-lg">${verdictTitle}</h3>
+                                ${data.is_live_ai ? '<span class="inline-flex items-center gap-1 bg-black/30 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-bold border border-white/20 text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> ✨ Gemini AI Live Fact-Check</span>' : ''}
+                            </div>
                             <span class="text-xs text-white/90 font-medium"><?= $lang === 'en' ? 'Trust Index (Trust Score):' : ($lang === 'hi' ? 'सत्यता निर्देशांक (Trust Score):' : 'सत्यता निर्देशांक (Trust Score):') ?> ${data.trust_score}%</span>
                         </div>
                     </div>

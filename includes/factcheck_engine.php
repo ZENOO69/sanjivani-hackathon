@@ -1,7 +1,7 @@
 <?php
 /**
  * FASAL - Satya-Rakshak (सत्य-रक्षक) Truth Verification & Misinformation Defense Engine
- * Resilient Defense against "The Bad Reading" (Viral Agronomy Rumors, Fraudulent Scheme Claims, and Coordinated Fake Submissions)
+ * Powered by Google Gemini AI (gemini-3.6-flash) with Agricultural & Government Grounding
  */
 
 if (!defined('FASAL_ROOT')) {
@@ -14,7 +14,7 @@ require_once __DIR__ . '/security.php';
 class FactCheckEngine {
     
     /**
-     * Curated Authoritative Truth Ground-Truth Knowledge Base (ICAR, MPKV Rahuri, MahaDBT, CIBRC)
+     * Curated Baseline Ground-Truth Knowledge Base (ICAR, MPKV Rahuri, MahaDBT, CIBRC)
      */
     private static $verifiedOntology = array(
         array(
@@ -99,15 +99,12 @@ class FactCheckEngine {
         )
     );
 
-    /**
-     * Get all trending debunked claims
-     */
     public static function getTrendingFactChecks() {
         return self::$verifiedOntology;
     }
 
     /**
-     * Verify any user query, forwarded WhatsApp message, or complaint text
+     * Primary Verification Entrypoint: Live Gemini AI Verification with Curated Fallback
      */
     public static function verifyClaim($inputText, $lang = 'mr') {
         $inputText = trim($inputText);
@@ -119,14 +116,18 @@ class FactCheckEngine {
             );
         }
 
-        $inputLower = mb_strtolower($inputText, 'UTF-8');
+        // 1. First Attempt: Real-Time Live Google Gemini API Verification
+        $aiResult = self::evaluateWithGeminiAI($inputText, $lang);
+        if ($aiResult && !empty($aiResult['success'])) {
+            return $aiResult;
+        }
 
-        // 1. Fast match against curated scientific ontology
+        // 2. Fallback: Curated Ground-Truth Database Matching
+        $inputLower = mb_strtolower($inputText, 'UTF-8');
         foreach (self::$verifiedOntology as $item) {
             $claimText = mb_strtolower($item['claim_mr'] . ' ' . $item['claim_en'] . ' ' . $item['category'], 'UTF-8');
             $keywords = isset($item['keywords']) ? $item['keywords'] : array();
 
-            // Direct keyword / topic match
             $matchedKw = 0;
             foreach ($keywords as $kw) {
                 if (mb_strpos($inputLower, mb_strtolower($kw, 'UTF-8')) !== false) {
@@ -140,7 +141,7 @@ class FactCheckEngine {
 
                 return array(
                     'success'           => true,
-                    'is_matched'        => true,
+                    'is_live_ai'        => false,
                     'verdict'           => $item['verdict'],
                     'trust_score'       => $item['trust_score'],
                     'matched_claim'     => $claim,
@@ -154,45 +155,57 @@ class FactCheckEngine {
             }
         }
 
-        // 2. High-Precision AI Fact Check using Gemini with Scientific Agronomy Grounding
-        $aiVerdict = self::evaluateWithGeminiAI($inputText, $lang);
-        return array_merge(array('success' => true, 'is_matched' => false), $aiVerdict);
+        // 3. Fallback Heuristic
+        return self::evaluateHeuristicFallback($inputText, $lang);
     }
 
     /**
-     * AI-Powered Agronomy & Governance Fact-Check
+     * Real-time Gemini AI Fact-Check Engine (using Gemini 3.6 Flash)
      */
-    private static function evaluateWithGeminiAI($claimText) {
+    private static function evaluateWithGeminiAI($claimText, $lang = 'mr') {
         $env = file_exists(FASAL_ROOT . '/env.php') ? (include FASAL_ROOT . '/env.php') : array();
         $apiKey = isset($env['gemini_api_key']) ? $env['gemini_api_key'] : '';
+        $model = isset($env['gemini_model']) ? $env['gemini_model'] : 'gemini-3.6-flash';
 
-        if (empty($apiKey) || strpos($apiKey, 'AIza') !== 0) {
-            return self::evaluateHeuristicFallback($claimText);
+        if (empty($apiKey) || strpos($apiKey, 'YOUR_GEMINI') === 0) {
+            return null;
         }
 
-        $prompt = "You are FASAL Satya-Rakshak, a government-grade agronomist and truth-verification AI for Maharashtra farmers (Kopargaon region). "
-            . "Analyze the following message, rumor, or claim: '{$claimText}'.\n"
-            . "Evaluate if it is a DANGEROUS_FAKE agronomic remedy, FAKE government scheme rumor, COORDINATED_SMEAR complaint, or GOVERNMENT_VERIFIED fact.\n"
-            . "Respond in strict JSON with keys: verdict (FAKE / DANGEROUS_FAKE / VERIFIED / MISLEADING), trust_score (0-100), debunk_summary_mr (Marathi clear scientific explanation), official_source (Authority reference), category, threat_level (SAFE/MEDIUM/HIGH/CRITICAL), recommendation_mr.";
+        $targetLangName = ($lang === 'en' ? 'English' : ($lang === 'hi' ? 'Hindi (हिंदी)' : 'Marathi (मराठी)'));
 
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $apiKey;
-        $body = json_encode(array(
+        $prompt = "You are FASAL Satya-Rakshak, an official government agronomist and truth-verification AI specializing in Maharashtra agriculture, MPKV Rahuri scientific advisories, ICAR chemical standards, and MahaDBT/Govt schemes.\n"
+            . "Analyze and fact-check the following message, WhatsApp forward, rumor, or citizen complaint: '{$claimText}'.\n"
+            . "Respond in strict JSON with the following exact keys in {$targetLangName} language:\n"
+            . "{\n"
+            . '  "verdict": "DANGEROUS_FAKE" or "FAKE" or "GOVERNMENT_VERIFIED" or "QUARANTINED_SMEAR" or "MISLEADING",' . "\n"
+            . '  "trust_score": (integer 0 to 100 where 100 is fully true and 0 is dangerous fake),' . "\n"
+            . '  "debunk_summary": "Crisp scientific or official explanation in ' . $targetLangName . '",' . "\n"
+            . '  "official_source": "Specific authority reference (e.g. MPKV Rahuri / ICAR-DOGR / MahaDBT / CIBRC)",' . "\n"
+            . '  "category": "Domain category in ' . $targetLangName . ' (e.g. Crop Protection / Gov Schemes / Market APMC)",' . "\n"
+            . '  "threat_level": "CRITICAL" or "HIGH" or "MEDIUM" or "SAFE",' . "\n"
+            . '  "recommendation": "Actionable safe recommendation for farmers in ' . $targetLangName . '"' . "\n"
+            . "}";
+
+        $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+        
+        $payload = array(
             'contents' => array(
                 array('parts' => array(array('text' => $prompt)))
             ),
             'generationConfig' => array(
                 'temperature' => 0.1,
-                'maxOutputTokens' => 600
+                'maxOutputTokens' => 2048,
+                'responseMimeType' => 'application/json'
             )
-        ));
+        );
 
-        $ch = curl_init($url);
+        $ch = curl_init($endpoint);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         $res = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
@@ -205,27 +218,44 @@ class FactCheckEngine {
             $parsed = json_decode($cleanedJson, true);
 
             if ($parsed && isset($parsed['verdict'])) {
+                $verdict = $parsed['verdict'];
+                $summary = isset($parsed['debunk_summary']) ? $parsed['debunk_summary'] : '';
+                $source = isset($parsed['official_source']) ? $parsed['official_source'] : 'ICAR - कृषी विज्ञान केंद्र (KVK)';
+                $category = isset($parsed['category']) ? $parsed['category'] : 'AI Fact Check';
+                $threat = isset($parsed['threat_level']) ? $parsed['threat_level'] : 'MEDIUM';
+                $rec = isset($parsed['recommendation']) ? $parsed['recommendation'] : self::getSafeActionRecommendation($verdict, $lang);
+
+                $shareText = "🛡️ *FASAL सत्य-रक्षक (Truth Radar) AI पडताळणी*\n\n"
+                    . "📌 *दावा:* " . mb_substr($claimText, 0, 80) . "...\n"
+                    . "⚖️ *निष्कर्ष:* " . $verdict . " (Trust Score: " . (isset($parsed['trust_score']) ? (int)$parsed['trust_score'] : 0) . "%)\n"
+                    . "📖 *वस्तुस्थिती:* " . $summary . "\n"
+                    . "🏛️ *संदर्भ:* " . $source . "\n\n"
+                    . "🌾 *पडताळणी करा:* https://sanjivanihackathon.space/factcheck";
+
                 return array(
-                    'verdict'           => $parsed['verdict'],
-                    'trust_score'       => isset($parsed['trust_score']) ? (int)$parsed['trust_score'] : 85,
+                    'success'           => true,
+                    'is_live_ai'        => true,
+                    'ai_model'          => $model,
+                    'verdict'           => $verdict,
+                    'trust_score'       => isset($parsed['trust_score']) ? (int)$parsed['trust_score'] : 0,
                     'matched_claim'     => $claimText,
-                    'debunk_summary'    => isset($parsed['debunk_summary_mr']) ? $parsed['debunk_summary_mr'] : 'पडताळणी पूर्ण झाली आहे.',
-                    'official_source'   => isset($parsed['official_source']) ? $parsed['official_source'] : 'ICAR - कृषी विज्ञान केंद्र (KVK)',
-                    'category'          => isset($parsed['category']) ? $parsed['category'] : 'कृषी सल्ला पडताळणी',
-                    'threat_level'      => isset($parsed['threat_level']) ? $parsed['threat_level'] : 'MEDIUM',
-                    'recommendation'    => isset($parsed['recommendation_mr']) ? $parsed['recommendation_mr'] : self::getSafeActionRecommendation($parsed['verdict']),
-                    'whatsapp_share'    => "🛡️ *FASAL सत्य-रक्षक पडताळणी*\n\n📌 *दावा:* " . mb_substr($claimText, 0, 80) . "...\n⚠️ *निष्कर्ष:* " . $parsed['verdict'] . "\n✅ *सत्य माहिती:* " . (isset($parsed['debunk_summary_mr']) ? $parsed['debunk_summary_mr'] : '') . "\n🔗 *अधिक माहितीसाठी:* https://sanjivanihackathon.space/factcheck"
+                    'debunk_summary'    => $summary,
+                    'official_source'   => $source,
+                    'category'          => $category,
+                    'threat_level'      => $threat,
+                    'recommendation'    => $rec,
+                    'whatsapp_share'    => $shareText
                 );
             }
         }
 
-        return self::evaluateHeuristicFallback($claimText);
+        return null;
     }
 
     /**
      * Heuristic scientific evaluation fallback
      */
-    private static function evaluateHeuristicFallback($text) {
+    private static function evaluateHeuristicFallback($text, $lang = 'mr') {
         $textLower = mb_strtolower($text, 'UTF-8');
         
         $dangerousKeywords = array('मीठ', 'युरिया', 'साखर', 'केरोसीन', 'डिझेल', 'रात्रीत गायब', '2 तासात', 'salt', 'urea');
@@ -248,47 +278,87 @@ class FactCheckEngine {
         }
 
         if ($isDangerous) {
+            $summary = $lang === 'en' ? 'Unscientific chemical mixture destroys crop foliage and salinizes soil permanently. Use MPKV Rahuri approved fungicide.' : 'अशा घरगुती रासायनिक मिश्रणांनी पिकांची पाने जळतात व मातीचे कायमस्वरूपी नुकसान होते. कृपया कृषी विद्यापीठाने (MPKV) शिफारस केलेलेच कीटकनाशके वापरा.';
             return array(
+                'success'           => true,
+                'is_live_ai'        => false,
                 'verdict'           => 'DANGEROUS_FAKE',
-                'trust_score'       => 95,
+                'trust_score'       => 5,
                 'matched_claim'     => $text,
-                'debunk_summary'    => 'अशा घरगुती रासायनिक मिश्रणांनी पिकांची पाने जळतात व मातीचे कायमस्वरूपी नुकसान होते. कृपया कृषी विद्यापीठाने (MPKV) शिफारस केलेलेच कीटकनाशके वापरा.',
+                'debunk_summary'    => $summary,
                 'official_source'   => 'ICAR - Central Insecticides Board & Registration Committee (CIBRC)',
                 'category'          => 'पीक संरक्षण (Crop Protection)',
                 'threat_level'      => 'CRITICAL',
-                'recommendation'    => 'हा मेसेज फॉरवर्ड करू नका. अधिकृत कृषी सहाय्यक किंवा KVK शास्त्रज्ञांशी संपर्क साधा.',
-                'whatsapp_share'    => "⚠️ *धोकादायक कृषी अफवा सावधगिरी!*\n\nमजकूर: " . mb_substr($text, 0, 70) . "\nहा उपाय अशास्त्रीय असून पिकाचे नुकसान करू शकतो.\nपडताळणी: https://sanjivanihackathon.space/factcheck"
+                'recommendation'    => self::getSafeActionRecommendation('DANGEROUS_FAKE', $lang),
+                'whatsapp_share'    => "⚠️ *धोकादायक कृषी अफवा सावधगिरी!*\n\nमजकूर: " . mb_substr($text, 0, 70) . "\nपडताळणी: https://sanjivanihackathon.space/factcheck"
             );
         }
 
         if ($isSchemeRumor) {
+            $summary = $lang === 'en' ? 'Do not trust unauthorized WhatsApp forwards regarding government schemes. Verify on official MahaDBT portal.' : 'शासकीय योजनांबाबत अनधिकृत व्हॉट्सअ‍ॅप मेसेजवर विश्वास ठेवू नका. सर्व योजनांची खरी माहिती थेट महाडीबीटी (MahaDBT) वर उपलब्ध असते.';
             return array(
+                'success'           => true,
+                'is_live_ai'        => false,
                 'verdict'           => 'FAKE',
-                'trust_score'       => 92,
+                'trust_score'       => 10,
                 'matched_claim'     => $text,
-                'debunk_summary'    => 'शासकीय योजनांबाबत अनधिकृत व्हॉट्सअ‍ॅप मेसेजवर विश्वास ठेवू नका. सर्व योजनांची खरी माहिती थेट महाडीबीटी (MahaDBT) किंवा कृषी विभागाच्या अधिकृत पोर्टलवर उपलब्ध असते.',
+                'debunk_summary'    => $summary,
                 'official_source'   => 'महाराष्ट्र शासन कृषी विभाग (MahaAgri)',
                 'category'          => 'शासकीय योजना (Gov Schemes)',
                 'threat_level'      => 'HIGH',
-                'recommendation'    => 'कोणत्याही संशयास्पद लिंकवर बँक माहिती किंवा OTP शेअर करू नका.',
-                'whatsapp_share'    => "🛡️ *शासकीय योजना अफवा अलर्ट!*\n\nमाहिती: " . mb_substr($text, 0, 70) . "\nनिष्कर्ष: खोटी अफवा.\nअधिकृत माहिती: https://sanjivanihackathon.space/factcheck"
+                'recommendation'    => self::getSafeActionRecommendation('FAKE', $lang),
+                'whatsapp_share'    => "🛡️ *शासकीय योजना अफवा अलर्ट!*\n\nमाहिती: " . mb_substr($text, 0, 70) . "\nपडताळणी: https://sanjivanihackathon.space/factcheck"
             );
         }
 
         return array(
+            'success'           => true,
+            'is_live_ai'        => false,
             'verdict'           => 'NEEDS_VERIFICATION',
-            'trust_score'       => 60,
+            'trust_score'       => 50,
             'matched_claim'     => $text,
-            'debunk_summary'    => 'हा दावा सध्या सत्य-रक्षक प्रणालीमध्ये कृषी शास्त्रज्ञांच्या तपासणीसाठी प्रलंबित आहे. अधिकृत दुजोरा मिळेपर्यंत हा मेसेज शेअर करू नका.',
+            'debunk_summary'    => $lang === 'en' ? 'This claim is currently queued for agronomist review. Do not forward unverified messages.' : 'हा दावा सध्या सत्य-रक्षक प्रणालीमध्ये कृषी शास्त्रज्ञांच्या तपासणीसाठी प्रलंबित आहे. अधिकृत दुजोरा मिळेपर्यंत हा मेसेज शेअर करू नका.',
             'official_source'   => 'FASAL Agronomy Research Desk & MPKV Rahuri',
             'category'          => 'सामान्य शेती पडताळणी',
             'threat_level'      => 'MEDIUM',
-            'recommendation'    => 'शंका असल्यास कोपरगाव कृषी विज्ञान केंद्राशी संपर्क साधा.',
-            'whatsapp_share'    => "📌 *FASAL सत्य-रक्षक पडताळणी प्रलंबित*\n\nदावा: " . mb_substr($text, 0, 70) . "\nतपासणी सुरू आहे. https://sanjivanihackathon.space/factcheck"
+            'recommendation'    => self::getSafeActionRecommendation('NEEDS_VERIFICATION', $lang),
+            'whatsapp_share'    => "📌 *FASAL सत्य-रक्षक पडताळणी प्रलंबित*\n\nदावा: " . mb_substr($text, 0, 70) . "\nhttps://sanjivanihackathon.space/factcheck"
         );
     }
 
-    private static function getSafeActionRecommendation($verdict) {
+    private static function getSafeActionRecommendation($verdict, $lang = 'mr') {
+        if ($lang === 'en') {
+            switch ($verdict) {
+                case 'DANGEROUS_FAKE':
+                    return '🚫 Stop this remedy immediately! Consult authorized Krishi Seva Kendra agronomists to prevent crop loss.';
+                case 'FAKE':
+                case 'MISLEADING':
+                    return '⚠️ Do not forward this message. Protect fellow farmers by sharing verified facts.';
+                case 'QUARANTINED_SMEAR':
+                    return '🛡️ Bot smear attack detected and quarantined. Lab certification confirms verified batch quality.';
+                case 'GOVERNMENT_VERIFIED':
+                    return '✅ This information is 100% verified and safe. Farmers can proceed with application.';
+                default:
+                    return 'ℹ️ Verify with official government or university portals.';
+            }
+        }
+        
+        if ($lang === 'hi') {
+            switch ($verdict) {
+                case 'DANGEROUS_FAKE':
+                    return '🚫 तत्काल यह उपाय रोकें! फसल नुकसान से बचने के लिए कृषि वैज्ञानिकों की सलाह लें।';
+                case 'FAKE':
+                case 'MISLEADING':
+                    return '⚠️ इस संदेश को आगे न भेजें। किसानों को जागरूक करने के लिए सत्य जानकारी साझा करें।';
+                case 'QUARANTINED_SMEAR':
+                    return '🛡️ सिंडिकेट बॉट हमला निष्प्रभ। प्रयोगशाला परीक्षण द्वारा गुणवत्ता प्रमाणित है।';
+                case 'GOVERNMENT_VERIFIED':
+                    return '✅ यह जानकारी 100% प्रमाणित व सत्य है।';
+                default:
+                    return 'ℹ️ आधिकारिक स्रोतों से पुष्टि करें।';
+            }
+        }
+
         switch ($verdict) {
             case 'DANGEROUS_FAKE':
                 return '🚫 तात्काळ हा उपाय थांबवा! पिकांचे व जमिनीचे नुकसान टाळण्यासाठी कृषी सेवा केंद्रातील अधिकृत तज्ज्ञांचा सल्ला घ्या.';
@@ -304,11 +374,14 @@ class FactCheckEngine {
         }
     }
 
-    private static function generateWhatsAppShareText($item) {
+    private static function generateWhatsAppShareText($item, $lang = 'mr') {
+        $claim = ($lang === 'en' && !empty($item['claim_en'])) ? $item['claim_en'] : $item['claim_mr'];
+        $debunk = ($lang === 'en' && !empty($item['debunk_summary_en'])) ? $item['debunk_summary_en'] : $item['debunk_summary_mr'];
+
         return "🛡️ *FASAL सत्य-रक्षक (Truth Radar) पडताळणी*\n\n"
-            . "📌 *व्हायरल दावा:* " . $item['claim_mr'] . "\n"
+            . "📌 *व्हायरल दावा:* " . $claim . "\n"
             . "⚖️ *निष्कर्ष:* " . ($item['verdict'] === 'GOVERNMENT_VERIFIED' ? '✅ प्रमाणित सत्य' : '❌ खोटी / धोकादायक अफवा') . "\n"
-            . "📖 *सत्य वस्तुस्थिती:* " . $item['debunk_summary_mr'] . "\n"
+            . "📖 *सत्य वस्तुस्थिती:* " . $debunk . "\n"
             . "🏛️ *अधिकृत संदर्भ:* " . $item['source'] . "\n\n"
             . "🌾 *शेतकरी बांधवांनो, अफवांना बळी पडू नका! खरी माहिती येथे तपासा:* https://sanjivanihackathon.space/factcheck";
     }
