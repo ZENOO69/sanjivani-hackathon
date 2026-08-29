@@ -96,11 +96,17 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                 </div>
             </div>
 
-            <!-- Blackout Simulation Quick Trigger -->
-            <button onclick="openBlackoutModal()" class="flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/90 hover:bg-rose-500 text-white font-black text-[10px] tracking-wide uppercase transition shadow-sm border border-rose-400/40 active:scale-95" title="The Blackout: Live Data Wipe & Self-Healing Resilience Test">
-                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                <span>⚡ The Blackout (Live Test)</span>
-            </button>
+            <!-- Truth Radar & Blackout Quick Triggers -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="factcheck" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600/90 hover:bg-emerald-500 text-white font-black text-[10px] tracking-wide uppercase transition shadow-sm border border-emerald-400/40 active:scale-95" title="The Bad Reading: AI Truth Verification & Rumor Buster">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
+                    <span>🛡️ सत्य-रक्षक (Truth Radar)</span>
+                </a>
+                <button onclick="openBlackoutModal()" class="flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/90 hover:bg-rose-500 text-white font-black text-[10px] tracking-wide uppercase transition shadow-sm border border-rose-400/40 active:scale-95" title="The Blackout: Live Data Wipe & Self-Healing Resilience Test">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    <span>⚡ The Blackout (Live Test)</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -139,6 +145,9 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                     </a>
                     <a href="schemes" class="px-3.5 py-2 rounded-xl transition <?= $currentPage === 'schemes' ? 'bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
                         <?= __t('nav_schemes') ?>
+                    </a>
+                    <a href="factcheck" class="px-3.5 py-2 rounded-xl transition flex items-center gap-1 <?= $currentPage === 'factcheck' ? 'bg-emerald-600 text-white font-extrabold shadow-sm' : 'hover:bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60' ?>">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-amber-500"></i> सत्य-रक्षक
                     </a>
                 </nav>
 
