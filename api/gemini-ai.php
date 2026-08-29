@@ -23,7 +23,7 @@ if (empty($query)) {
 
 $geminiCfg = $config['gemini_api'];
 $apiKey = $geminiCfg['api_key'];
-$model = isset($geminiCfg['model']) ? $geminiCfg['model'] : 'gemini-1.5-flash';
+$model = isset($geminiCfg['model']) ? $geminiCfg['model'] : 'gemini-3.6-flash';
 
 $langName = ($lang === 'mr' ? 'Marathi (मराठी)' : ($lang === 'hi' ? 'Hindi (हिंदी)' : 'English'));
 $systemContext = "You are FASAL AI Doctor, an expert agronomist specializing in Maharashtra agriculture (Ahmednagar, Nashik, Vidarbha). 
@@ -49,8 +49,8 @@ if (!empty($apiKey) && strpos($apiKey, 'YOUR_GEMINI') === false) {
             )
         ),
         'generationConfig' => array(
-            'temperature' => 0.4,
-            'maxOutputTokens' => 800,
+            'temperature' => 0.2,
+            'maxOutputTokens' => 2048,
         )
     );
 
@@ -71,7 +71,7 @@ if (!empty($apiKey) && strpos($apiKey, 'YOUR_GEMINI') === false) {
             echo json_encode(array(
                 'success' => true,
                 'response' => $aiText,
-                'source'   => 'Google Gemini 1.5 Flash (Live AI)',
+                'source'   => 'Google Gemini 3.6 Flash (Live AI)',
             ));
             exit;
         }
