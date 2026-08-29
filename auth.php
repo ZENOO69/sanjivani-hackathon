@@ -25,7 +25,13 @@ if (empty($_SESSION['csrf_token'])) {
     }
 }
 
-$action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : 'login_view');
+// Auto detect google callback if code parameter exists
+if (isset($_GET['code'])) {
+    $action = 'google_callback';
+} else {
+    $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : 'login_view');
+}
+
 $error = '';
 $success = '';
 
@@ -65,6 +71,7 @@ if ($action === 'google_login') {
         'scope'         => 'openid email profile',
         'state'         => $_SESSION['csrf_token'],
         'access_type'   => 'online',
+        'prompt'        => 'select_account',
     );
     header('Location: https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query($params));
     exit;
@@ -90,6 +97,7 @@ if ($action === 'google_callback' && isset($_GET['code'])) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
     $tokenInfo = json_decode($response, true);
@@ -153,6 +161,9 @@ if ($action === 'google_callback' && isset($_GET['code'])) {
             header('Location: dashboard');
             exit;
         }
+    } else {
+        $error = 'Google लॉगिन अयशस्वी. कृपया पुन्हा प्रयत्न करा. (' . (isset($tokenInfo['error_description']) ? $tokenInfo['error_description'] : 'Token Error') . ')';
+        $action = 'login_view';
     }
 }
 

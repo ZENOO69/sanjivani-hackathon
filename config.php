@@ -23,11 +23,20 @@ if (session_status() === PHP_SESSION_NONE) {
     @session_start();
 }
 
-$hostName = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
-$scriptName = isset($_SERVER['SCRIPT_NAME']) ? dirname($_SERVER['SCRIPT_NAME']) : '';
-$isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on');
+// Smart HTTPS detection (Supports Cloudflare, Reverse Proxies & SSL)
+$isHttps = (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1))
+    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+    || (isset($_SERVER['HTTP_FRONT_END_HTTPS']) && $_SERVER['HTTP_FRONT_END_HTTPS'] === 'on')
+    || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
+
 $proto = $isHttps ? 'https' : 'http';
-$baseUrl = $proto . '://' . $hostName . rtrim($scriptName, '/\\');
+$hostName = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'thermalstability.space';
+$scriptDir = isset($_SERVER['SCRIPT_NAME']) ? dirname($_SERVER['SCRIPT_NAME']) : '';
+$scriptClean = ($scriptDir === '/' || $scriptDir === '\\') ? '' : rtrim($scriptDir, '/\\');
+$baseUrl = $proto . '://' . $hostName . $scriptClean;
+
+// Default redirect URI for Google OAuth
+$defaultRedirectUri = $baseUrl . '/auth?action=google_callback';
 
 return array(
     // ----------------------------------------------------------------
@@ -82,7 +91,7 @@ return array(
     'google_oauth' => array(
         'client_id'     => isset($env['google_client_id']) ? $env['google_client_id'] : 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
         'client_secret' => isset($env['google_client_secret']) ? $env['google_client_secret'] : 'YOUR_GOOGLE_CLIENT_SECRET',
-        'redirect_uri'  => $baseUrl . '/auth?action=google_callback',
+        'redirect_uri'  => isset($env['google_redirect_uri']) ? $env['google_redirect_uri'] : $defaultRedirectUri,
     ),
 
     // ----------------------------------------------------------------
