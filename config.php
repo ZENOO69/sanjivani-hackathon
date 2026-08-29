@@ -31,7 +31,7 @@ return array(
     'app' => array(
         'name'        => 'FASAL',
         'tagline'     => 'स्मार्ट शेती, समृद्ध शेतकरी • Smart Farming Decision Platform',
-        'footer_text' => '© ' . date('Y') . ' FASAL - Unified Farmer Decision-Intelligence Platform. Made with ❤️ for Maharashtra Farmers.',
+        'footer_text' => '© ' . date('Y') . ' FASAL - Unified Farmer Decision-Intelligence Platform. Made with ❤️ for Maharashtra Farmers. Sanjivani Hackathon, Kopargaon',
         'version'     => '1.0.0-Release',
         'base_url'    => $baseUrl,
         'default_lang'=> 'mr',
