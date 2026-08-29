@@ -1,0 +1,143 @@
+/* ====================================================================
+   FASAL - Custom Aesthetics & Farmer-Optimized Styling
+   ==================================================================== */
+
+:root {
+    --primary-green: #059669;
+    --primary-dark: #065f46;
+    --accent-amber: #d97706;
+    --bg-light: #f8fafc;
+    --card-bg: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #475569;
+}
+
+body {
+    font-family: 'Noto Sans Devanagari', 'Outfit', system-ui, -apple-system, sans-serif;
+    color: var(--text-main);
+    background-color: #f8fafc;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Light Cards */
+.glass-card {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+}
+
+.glass-card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    border-color: rgba(5, 150, 105, 0.4);
+}
+
+/* Ticker Marquee Animation */
+@keyframes ticker {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-50%, 0, 0); }
+}
+
+.marquee-container {
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+}
+
+.marquee-content {
+    display: inline-flex;
+    animation: ticker 35s linear infinite;
+}
+
+.marquee-container:hover .marquee-content {
+    animation-play-state: paused;
+}
+
+/* Pulse badge */
+.pulse-live {
+    position: relative;
+}
+.pulse-live::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -12px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10b981;
+    animation: pulseGlow 1.8s infinite;
+}
+
+@keyframes pulseGlow {
+    0% { transform: translateY(-50%) scale(0.9); opacity: 0.8; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: translateY(-50%) scale(1.1); opacity: 1; box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: translateY(-50%) scale(0.9); opacity: 0.8; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* ====================================================================
+   EASY MODE (Farmer-First Large Text & Tactile UI for Low-Literacy)
+   ==================================================================== */
+
+body.easy-mode {
+    font-size: 1.15rem;
+    line-height: 1.6;
+}
+
+body.easy-mode h1 {
+    font-size: 2rem !important;
+}
+
+body.easy-mode h2 {
+    font-size: 1.65rem !important;
+}
+
+body.easy-mode h3 {
+    font-size: 1.4rem !important;
+}
+
+body.easy-mode p, 
+body.easy-mode span, 
+body.easy-mode a, 
+body.easy-mode button {
+    font-size: 1.15rem;
+}
+
+body.easy-mode .easy-large-btn {
+    padding-top: 1.1rem !important;
+    padding-bottom: 1.1rem !important;
+    font-size: 1.25rem !important;
+    border-radius: 1.25rem !important;
+}
+
+body.easy-mode .easy-metric-val {
+    font-size: 2.75rem !important;
+    font-weight: 800 !important;
+}
+
+body.easy-mode .easy-badge {
+    padding: 0.6rem 1.2rem !important;
+    font-size: 1.1rem !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
