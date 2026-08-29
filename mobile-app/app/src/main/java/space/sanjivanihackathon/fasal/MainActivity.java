@@ -77,11 +77,17 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT));
         rootLayout.setBackgroundColor(Color.parseColor("#0F172A"));
 
-        // 1. WebView
+        // 1. Native WebView with strict scroll lock
         webView = new WebView(this);
         webView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
+        
+        // Remove web bounce and horizontal scroll
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        webView.setHorizontalScrollBarEnabled(false);
+        webView.setVerticalScrollBarEnabled(false);
+
         rootLayout.addView(webView);
 
         // 2. Top Progress Bar
@@ -192,7 +198,9 @@ public class MainActivity extends Activity {
         settings.setGeolocationEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        settings.setSupportZoom(true);
+        
+        // Strict native viewport and zero horizontal movement
+        settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setLoadWithOverviewMode(true);
@@ -316,6 +324,18 @@ public class MainActivity extends Activity {
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
             progressBar.setVisibility(View.GONE);
+
+            // Inject strict viewport lock and touch behavior into the webview
+            String js = "var style = document.createElement('style');" +
+                    "style.innerHTML = '*, *::before, *::after { max-width: 100% !important; box-sizing: border-box !important; } " +
+                    "html, body { width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; position: relative !important; touch-action: pan-y !important; -webkit-tap-highlight-color: transparent !important; user-select: none !important; -webkit-user-select: none !important; } " +
+                    "input, textarea, select { user-select: auto !important; -webkit-user-select: auto !important; }';" +
+                    "document.head.appendChild(style);";
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                view.evaluateJavascript(js, null);
+            } else {
+                view.loadUrl("javascript:" + js);
+            }
         }
 
         @Override

@@ -38,7 +38,11 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 <html lang="<?= I18n::getLang() ?>" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#064E3B">
     <meta name="csrf-token" content="<?= Security::getCsrfToken() ?>">
     <title><?= htmlspecialchars($config['app']['name']) ?> - <?= htmlspecialchars($config['app']['tagline']) ?></title>
     <meta name="description" content="FASAL: Unified Farmer Decision-Intelligence & Advisory Platform. Live Weather, IoT Soil Telemetry, Mandi Rates, and Gemini AI Crop Doctor.">
