@@ -24,13 +24,18 @@ if ($action === 'trending') {
 }
 
 if ($action === 'verify') {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    $lang = isset($_GET['lang']) ? $_GET['lang'] : (isset($input['lang']) ? $input['lang'] : (isset($_SESSION['lang']) ? $_SESSION['lang'] : 'mr'));
     $text = isset($input['query']) ? Security::sanitizeString($input['query']) : (isset($_GET['query']) ? Security::sanitizeString($_GET['query']) : '');
     if (empty($text)) {
-        echo json_encode(array('success' => false, 'message' => 'Query is required'));
+        $msg = $lang === 'en' ? 'Query is required' : ($lang === 'hi' ? 'संदेश दर्ज करना आवश्यक है' : 'पडताळणीसाठी मजकूर आवश्यक आहे');
+        echo json_encode(array('success' => false, 'message' => $msg));
         exit;
     }
 
-    $result = FactCheckEngine::verifyClaim($text);
+    $result = FactCheckEngine::verifyClaim($text, $lang);
     echo json_encode($result);
     exit;
 }

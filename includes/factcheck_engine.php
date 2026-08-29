@@ -109,12 +109,13 @@ class FactCheckEngine {
     /**
      * Verify any user query, forwarded WhatsApp message, or complaint text
      */
-    public static function verifyClaim($inputText) {
+    public static function verifyClaim($inputText, $lang = 'mr') {
         $inputText = trim($inputText);
         if (empty($inputText)) {
+            $msg = $lang === 'en' ? 'Please enter text or news claim for verification.' : ($lang === 'hi' ? 'कृपया सत्यापन के लिए संदेश या खबर दर्ज करें।' : 'कृपया पडताळणीसाठी मजकूर किंवा बातमी प्रविष्ट करा.');
             return array(
                 'success' => false,
-                'message' => 'कृपया पडताळणीसाठी मजकूर किंवा बातमी प्रविष्ट करा.'
+                'message' => $msg
             );
         }
 
@@ -134,24 +135,27 @@ class FactCheckEngine {
             }
 
             if ($matchedKw >= 1 || mb_strpos($claimText, $inputLower) !== false) {
+                $claim = ($lang === 'en' && !empty($item['claim_en'])) ? $item['claim_en'] : $item['claim_mr'];
+                $debunk = ($lang === 'en' && !empty($item['debunk_summary_en'])) ? $item['debunk_summary_en'] : $item['debunk_summary_mr'];
+
                 return array(
                     'success'           => true,
                     'is_matched'        => true,
                     'verdict'           => $item['verdict'],
                     'trust_score'       => $item['trust_score'],
-                    'matched_claim'     => $item['claim_mr'],
-                    'debunk_summary'    => $item['debunk_summary_mr'],
+                    'matched_claim'     => $claim,
+                    'debunk_summary'    => $debunk,
                     'official_source'   => $item['source'],
                     'category'          => $item['category'],
                     'threat_level'      => $item['threat_level'],
-                    'recommendation'    => self::getSafeActionRecommendation($item['verdict']),
-                    'whatsapp_share'    => self::generateWhatsAppShareText($item)
+                    'recommendation'    => self::getSafeActionRecommendation($item['verdict'], $lang),
+                    'whatsapp_share'    => self::generateWhatsAppShareText($item, $lang)
                 );
             }
         }
 
         // 2. High-Precision AI Fact Check using Gemini with Scientific Agronomy Grounding
-        $aiVerdict = self::evaluateWithGeminiAI($inputText);
+        $aiVerdict = self::evaluateWithGeminiAI($inputText, $lang);
         return array_merge(array('success' => true, 'is_matched' => false), $aiVerdict);
     }
 

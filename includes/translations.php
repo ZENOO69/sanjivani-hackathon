@@ -18,48 +18,53 @@ class I18n {
             'en' => 'FASAL',
         ),
         'tagline' => array(
-            'mr' => 'स्मार्ट शेती, समृद्ध शेतकरी • निर्णय सल्लागार प्रणाली',
-            'hi' => 'स्मार्ट खेती, समृद्ध किसान • निर्णय सलाहकार मंच',
-            'en' => 'Smart Farming Decision-Intelligence & Advisory Platform',
+            'mr' => 'स्मार्ट शेती, समृद्ध शेतकरी • स्मार्ट कृषी मंच',
+            'hi' => 'स्मार्ट खेती, समृद्ध किसान • स्मार्ट कृषि मंच',
+            'en' => 'Smart Farming Decision-Intelligence Platform',
         ),
         'nav_dashboard' => array(
-            'mr' => 'मुख्य डॅशबोर्ड',
+            'mr' => 'डॅशबोर्ड',
             'hi' => 'डैशबोर्ड',
             'en' => 'Dashboard',
         ),
         'nav_advisory' => array(
-            'mr' => 'AI पीक डॉक्टर व सल्ला',
-            'hi' => 'AI फसल डॉक्टर व सलाह',
-            'en' => 'AI Crop Doctor & Advisory',
+            'mr' => 'पीक सल्ला',
+            'hi' => 'फसल सलाह',
+            'en' => 'Crop Doctor',
         ),
         'nav_mandi' => array(
-            'mr' => 'थेट बाजार भाव (APMC)',
-            'hi' => 'लाइव मंडी भाव (APMC)',
-            'en' => 'Live Mandi Rates',
+            'mr' => 'बाजार भाव',
+            'hi' => 'मंडी भाव',
+            'en' => 'Mandi Rates',
         ),
         'nav_community' => array(
-            'mr' => 'ट्रॅक्टर व शेतमजूर बुकिंग',
-            'hi' => 'ट्रैक्टर व मजदूर बुकिंग',
-            'en' => 'Machinery & Labour',
+            'mr' => 'यंत्र व मजूर',
+            'hi' => 'मशीनरी व मजदूर',
+            'en' => 'Machinery',
         ),
         'nav_schemes' => array(
-            'mr' => 'सरकारी योजना व अनुदान',
-            'hi' => 'सरकारी योजनाएं व सब्सिडी',
-            'en' => 'Govt Schemes & Subsidies',
+            'mr' => 'शासकीय योजना',
+            'hi' => 'सरकारी योजनाएं',
+            'en' => 'Govt Schemes',
+        ),
+        'nav_factcheck' => array(
+            'mr' => 'सत्य-रक्षक',
+            'hi' => 'सत्य-रक्षक',
+            'en' => 'Truth Radar',
         ),
         'nav_profile' => array(
-            'mr' => 'माझी शेती प्रोफाइल',
-            'hi' => 'मेरी खेत प्रोफाइल',
-            'en' => 'Farm Profile',
+            'mr' => 'माझी प्रोफाइल',
+            'hi' => 'मेरी प्रोफाइल',
+            'en' => 'Profile',
         ),
         'nav_login' => array(
-            'mr' => 'लॉगिन करा',
-            'hi' => 'लॉग इन करें',
+            'mr' => 'लॉगिन',
+            'hi' => 'लॉग इन',
             'en' => 'Login',
         ),
         'nav_register' => array(
-            'mr' => 'नवीन नोंदणी करा',
-            'hi' => 'नया पंजीकरण',
+            'mr' => 'नोंदणी',
+            'hi' => 'पंजीकरण',
             'en' => 'Register',
         ),
         'nav_logout' => array(
@@ -68,9 +73,9 @@ class I18n {
             'en' => 'Logout',
         ),
         'easy_mode' => array(
-            'mr' => 'सुलभ मोड (मोठा मजकूर)',
-            'hi' => 'सरल मोड (बड़ा टेक्स्ट)',
-            'en' => 'Easy Farmer Mode',
+            'mr' => 'सुलभ मोड',
+            'hi' => 'सरल मोड',
+            'en' => 'Easy Mode',
         ),
         'listen_audio' => array(
             'mr' => 'सल्ला ऐका 🔊',
@@ -81,6 +86,118 @@ class I18n {
             'mr' => 'आवाज थांबवा ⏹',
             'hi' => 'आवाज रोकें ⏹',
             'en' => 'Stop Audio ⏹',
+        ),
+
+        // Fact Check (The Bad Reading) Translations
+        'fc_hero_badge' => array(
+            'mr' => 'The Bad Reading • रिअल-टाइम अफवा व चुकीची माहिती प्रतिबंधक यंत्रणा',
+            'hi' => 'The Bad Reading • रियल-टाइम अफवाह व भ्रामक जानकारी सुरक्षा प्रणाली',
+            'en' => 'The Bad Reading • Real-Time Misinformation Defense',
+        ),
+        'fc_hero_title_1' => array(
+            'mr' => 'सत्य-रक्षक',
+            'hi' => 'सत्य-रक्षक',
+            'en' => 'Truth Radar',
+        ),
+        'fc_hero_title_2' => array(
+            'mr' => 'Truth Radar',
+            'hi' => 'Truth Radar',
+            'en' => 'Fact-Check Engine',
+        ),
+        'fc_hero_desc' => array(
+            'mr' => 'व्हायरल अफवा, चुकीचे कृषी उपाय, बनावट शासकीय योजना व व्यावसायिक हेवेदाव्यातून केल्या जाणाऱ्या बोगस तक्रारींची वैज्ञानिक व शासकीय पडताळणी करणारी स्वयंचलित विश्वासार्ह यंत्रणा.',
+            'hi' => 'वायरल अफवाहें, गलत कृषि उपाय, फर्जी सरकारी योजनाएं और दुर्भावनापूर्ण शिकायतों की वैज्ञानिक व सरकारी पुष्टि करने वाला स्वचालित विश्वसनीय मंच।',
+            'en' => 'Automated truth-verification system against viral agricultural rumors, fraudulent government schemes, unscientific remedies, and coordinated smear complaints.',
+        ),
+        'fc_badge_icar' => array(
+            'mr' => 'ICAR व MPKV राहुरी प्रमाणित',
+            'hi' => 'ICAR व MPKV राहुरी प्रमाणित',
+            'en' => 'ICAR & MPKV Rahuri Verified',
+        ),
+        'fc_badge_gr' => array(
+            'mr' => 'शासन निर्णय (GR) थेट संदर्भ',
+            'hi' => 'सरकारी शासनादेश (GR) संदर्भ',
+            'en' => 'Official Govt GR Direct Source',
+        ),
+        'fc_badge_bot' => array(
+            'mr' => 'सिंडिकेट बॉट स्मियर डिटेक्शन',
+            'hi' => 'सिंडिकेट बॉट स्मियर डिटेक्शन',
+            'en' => 'Syndicate Bot Smear Detection',
+        ),
+        'fc_scanner_title' => array(
+            'mr' => 'व्हॉट्सअ‍ॅप मेसेज / बातमीची सत्यता तपासा',
+            'hi' => 'व्हाट्सएप संदेश / खबर की सत्यता जांचें',
+            'en' => 'Verify WhatsApp Forwards & News Authenticity',
+        ),
+        'fc_scanner_desc' => array(
+            'mr' => 'कोणताही व्हायरल मेसेज, खतांची/औषधांची माहिती किंवा योजनेचा दावा येथे पेस्ट करा आणि काही सेकंदात अधिकृत वस्तुस्थिती जाणून घ्या:',
+            'hi' => 'कोई भी वायरल संदेश, खाद/दवा की सलाह या योजना का दावा यहाँ पेस्ट करें और कुछ ही सेकंड में आधिकारिक स्थिति जानें:',
+            'en' => 'Paste any viral forward, fertilizer/pesticide remedy, or scheme claim to get instant government-certified truth:',
+        ),
+        'fc_placeholder' => array(
+            'mr' => 'उदा. कांद्यावर मीठ फवारल्यास करपा बरा होतो का? / नमो शेतकरी योजना बंद झाली का?',
+            'hi' => 'उदा. प्याज पर नमक छिड़कने से झुलसा रोग ठीक होता है क्या? / नमो शेतकरी योजना बंद हो गई क्या?',
+            'en' => 'e.g. Does spraying salt cure onion blight? / Has the Namo Shetkari scheme been cancelled?',
+        ),
+        'fc_quick_test' => array(
+            'mr' => 'जलद चाचणी:',
+            'hi' => 'त्वरित परीक्षण:',
+            'en' => 'Quick Presets:',
+        ),
+        'fc_preset_salt' => array(
+            'mr' => '🧂 मीठ फवारणी उपाय',
+            'hi' => '🧂 नमक छिड़काव उपाय',
+            'en' => '🧂 Salt Spray Remedy',
+        ),
+        'fc_preset_scheme' => array(
+            'mr' => '🏛️ नमो शेतकरी योजना बंद',
+            'hi' => '🏛️ नमो शेतकरी योजना बंद',
+            'en' => '🏛️ Namo Shetkari Scheme Rumor',
+        ),
+        'fc_preset_seed' => array(
+            'mr' => '🛡️ बोगस बियाणे तक्रार',
+            'hi' => '🛡️ फर्जी बीज शिकायत',
+            'en' => '🛡️ Fake Seed Complaint',
+        ),
+        'fc_btn_verify' => array(
+            'mr' => 'पडताळणी करा (Verify Now)',
+            'hi' => 'सत्यापित करें (Verify Now)',
+            'en' => 'Verify Claim Now',
+        ),
+        'fc_trending_title' => array(
+            'mr' => 'सध्याच्या व्हायरल अफवा व वैज्ञानिक सत्य (Trending Fact-Checks)',
+            'hi' => 'वर्तमान वायरल अफवाहें व वैज्ञानिक सत्य (Trending Fact-Checks)',
+            'en' => 'Active Viral Rumors & Scientific Truth (Trending Fact-Checks)',
+        ),
+        'fc_trending_sub' => array(
+            'mr' => 'कोपरगाव व उत्तर महाराष्ट्र परिसरातील कृषी शास्त्रज्ञांनी फेटाळलेल्या खोट्या बातम्या',
+            'hi' => 'कोपरगांव व उत्तरी महाराष्ट्र क्षेत्र के कृषि वैज्ञानिकों द्वारा खारिज की गई भ्रामक खबरें',
+            'en' => 'Debunked false claims and fraudulent agricultural advisories in Kopargaon and Maharashtra',
+        ),
+        'fc_stopped_shares' => array(
+            'mr' => 'शेअर्स थांबवले',
+            'hi' => 'शेयर रोके गए',
+            'en' => 'Viral Shares Blocked',
+        ),
+        'fc_fully_safe' => array(
+            'mr' => '100% सुरक्षित व प्रमाणित',
+            'hi' => '100% सुरक्षित व प्रमाणित',
+            'en' => '100% Safe & Verified',
+        ),
+        'fc_official_fact' => array(
+            'mr' => 'अधिकृत वस्तुस्थिती (Official Fact):',
+            'hi' => 'आधिकारिक वस्तुस्थिति (Official Fact):',
+            'en' => 'Official Scientific Fact:',
+        ),
+        'fc_scientific_debunk' => array(
+            'mr' => 'वैज्ञानिक सत्य व खंडन (Scientific Debunk):',
+            'hi' => 'वैज्ञानिक सत्य व खंडन (Scientific Debunk):',
+            'en' => 'Scientific Debunk & Truth:',
+        ),
+        'fc_share_whatsapp' => array(
+            'mr' => 'व्हॉट्सअ‍ॅपवर सत्य शेअर करा',
+            'hi' => 'व्हाट्सएप पर सत्य शेयर करें',
+            'en' => 'Share Fact-Check on WhatsApp',
         ),
 
         // IoT & Weather

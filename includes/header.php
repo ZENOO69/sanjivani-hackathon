@@ -112,73 +112,76 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 
     <!-- MAIN APP NAVBAR -->
     <header class="bg-white/95 backdrop-blur-md border-b border-emerald-100 sticky top-0 z-40 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16 sm:h-20">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 sm:h-18 gap-2 lg:gap-4">
                 
-                <div class="flex items-center gap-3">
-                    <a href="index" class="flex items-center gap-2.5 group">
-                        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-green-600 to-amber-400 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-emerald-600/20 group-hover:scale-105 transition transform">
+                <!-- Logo -->
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <a href="index" class="flex items-center gap-2 group">
+                        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-green-600 to-amber-400 flex items-center justify-center text-white font-black text-xl shadow-md shadow-emerald-600/20 group-hover:scale-105 transition transform">
                             🌱
                         </div>
                         <div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-2xl sm:text-3xl font-black tracking-tight text-emerald-950"><?= htmlspecialchars($config['app']['name']) ?></span>
-                                <span class="hidden sm:inline-block px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full uppercase">Kopargaon Live</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xl sm:text-2xl font-black tracking-tight text-emerald-950"><?= htmlspecialchars($config['app']['name']) ?></span>
+                                <span class="hidden xl:inline-block px-1.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[9px] rounded-full uppercase">Kopargaon Live</span>
                             </div>
-                            <p class="text-xs text-emerald-700 font-medium hidden sm:block"><?= htmlspecialchars($config['app']['tagline']) ?></p>
+                            <p class="text-[10px] text-emerald-700 font-medium hidden lg:block truncate max-w-[200px]"><?= htmlspecialchars($config['app']['tagline']) ?></p>
                         </div>
                     </a>
                 </div>
 
-                <nav class="hidden md:flex items-center gap-1 text-sm font-bold text-slate-700">
-                    <a href="dashboard" class="px-3.5 py-2 rounded-xl transition <?= in_array($currentPage, array('dashboard', '')) ? 'bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
+                <!-- Desktop Nav Links (Clean Single-Line Aligned) -->
+                <nav class="hidden md:flex items-center gap-1 text-xs lg:text-sm font-semibold text-slate-700">
+                    <a href="dashboard" class="px-2.5 lg:px-3 py-1.5 rounded-lg transition whitespace-nowrap h-9 inline-flex items-center <?= in_array($currentPage, array('dashboard', '')) ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
                         <?= __t('nav_dashboard') ?>
                     </a>
-                    <a href="advisory" class="px-3.5 py-2 rounded-xl transition <?= $currentPage === 'advisory' ? 'bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
+                    <a href="advisory" class="px-2.5 lg:px-3 py-1.5 rounded-lg transition whitespace-nowrap h-9 inline-flex items-center <?= $currentPage === 'advisory' ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
                         <?= __t('nav_advisory') ?>
                     </a>
-                    <a href="mandi" class="px-3.5 py-2 rounded-xl transition <?= $currentPage === 'mandi' ? 'bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
+                    <a href="mandi" class="px-2.5 lg:px-3 py-1.5 rounded-lg transition whitespace-nowrap h-9 inline-flex items-center <?= $currentPage === 'mandi' ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
                         <?= __t('nav_mandi') ?>
                     </a>
-                    <a href="community" class="px-3.5 py-2 rounded-xl transition <?= $currentPage === 'community' ? 'bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
+                    <a href="community" class="px-2.5 lg:px-3 py-1.5 rounded-lg transition whitespace-nowrap h-9 inline-flex items-center <?= $currentPage === 'community' ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
                         <?= __t('nav_community') ?>
                     </a>
-                    <a href="schemes" class="px-3.5 py-2 rounded-xl transition <?= $currentPage === 'schemes' ? 'bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
+                    <a href="schemes" class="px-2.5 lg:px-3 py-1.5 rounded-lg transition whitespace-nowrap h-9 inline-flex items-center <?= $currentPage === 'schemes' ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
                         <?= __t('nav_schemes') ?>
                     </a>
-                    <a href="factcheck" class="px-3.5 py-2 rounded-xl transition flex items-center gap-1 <?= $currentPage === 'factcheck' ? 'bg-emerald-600 text-white font-extrabold shadow-sm' : 'hover:bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/60' ?>">
-                        <i data-lucide="shield-check" class="w-4 h-4 text-amber-500"></i> सत्य-रक्षक
+                    <a href="factcheck" class="px-2.5 lg:px-3 py-1.5 rounded-lg transition whitespace-nowrap h-9 inline-flex items-center gap-1 <?= $currentPage === 'factcheck' ? 'bg-emerald-600 text-white font-bold shadow-sm' : 'bg-emerald-50/80 text-emerald-800 hover:bg-emerald-100 font-semibold border border-emerald-200/60' ?>">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-500"></i>
+                        <span><?= __t('nav_factcheck') ?></span>
                     </a>
                 </nav>
 
-                <div class="flex items-center gap-2 sm:gap-3">
-                    <button onclick="toggleEasyMode()" class="easy-mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 text-xs sm:text-sm font-bold bg-amber-50 text-amber-900 hover:bg-amber-100 transition shadow-sm" title="मोठा मजकूर / सुलभ शेतकरी मोड">
-                        <i data-lucide="eye" class="w-4 h-4 text-amber-700"></i>
+                <!-- Actions: Easy Mode, Language & Profile -->
+                <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                    <button onclick="toggleEasyMode()" class="easy-mode-btn inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 text-xs font-semibold bg-amber-50 text-amber-900 hover:bg-amber-100 transition shadow-sm h-8 sm:h-9 whitespace-nowrap" title="सुलभ शेतकरी मोड / Easy Mode">
+                        <i data-lucide="eye" class="w-3.5 h-3.5 text-amber-700"></i>
                         <span class="hidden sm:inline"><?= __t('easy_mode') ?></span>
-                        <span class="sm:hidden">सुलभ</span>
                     </button>
 
-                    <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-                        <a href="?lang=mr" class="px-2 py-1 rounded-lg transition <?= I18n::getLang() === 'mr' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:text-emerald-700' ?>">मराठी</a>
-                        <a href="?lang=hi" class="px-2 py-1 rounded-lg transition <?= I18n::getLang() === 'hi' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:text-emerald-700' ?>">हिंदी</a>
-                        <a href="?lang=en" class="px-2 py-1 rounded-lg transition <?= I18n::getLang() === 'en' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:text-emerald-700' ?>">EN</a>
+                    <div class="inline-flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-bold h-8 sm:h-9">
+                        <a href="?lang=mr" class="px-2 py-0.5 rounded-md transition <?= I18n::getLang() === 'mr' ? 'bg-emerald-600 text-white shadow-sm font-bold' : 'text-slate-600 hover:text-emerald-700' ?>">मराठी</a>
+                        <a href="?lang=hi" class="px-2 py-0.5 rounded-md transition <?= I18n::getLang() === 'hi' ? 'bg-emerald-600 text-white shadow-sm font-bold' : 'text-slate-600 hover:text-emerald-700' ?>">हिंदी</a>
+                        <a href="?lang=en" class="px-2 py-0.5 rounded-md transition <?= I18n::getLang() === 'en' ? 'bg-emerald-600 text-white shadow-sm font-bold' : 'text-slate-600 hover:text-emerald-700' ?>">EN</a>
                     </div>
 
                     <?php if ($isLoggedIn): ?>
                         <div class="relative group">
-                            <a href="profile" class="flex items-center gap-2 pl-2 pr-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-2xl transition">
-                                <div class="w-8 h-8 rounded-full bg-emerald-600 text-white font-black text-sm flex items-center justify-center shadow-sm">
+                            <a href="profile" class="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition h-8 sm:h-9">
+                                <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center shadow-sm">
                                     <?= mb_substr($userName, 0, 1, 'UTF-8') ?>
                                 </div>
                                 <div class="hidden lg:block text-left text-xs">
-                                    <div class="font-bold text-emerald-950 truncate max-w-[100px]"><?= htmlspecialchars($userName) ?></div>
-                                    <div class="text-[10px] text-emerald-700"><?= htmlspecialchars($userCrop) ?></div>
+                                    <div class="font-bold text-emerald-950 truncate max-w-[90px] leading-tight"><?= htmlspecialchars($userName) ?></div>
+                                    <div class="text-[9px] text-emerald-700 leading-none truncate max-w-[90px]"><?= htmlspecialchars($userCrop) ?></div>
                                 </div>
                             </a>
                         </div>
                     <?php else: ?>
-                        <a href="auth?action=login_view" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
-                            <i data-lucide="log-in" class="w-4 h-4"></i>
+                        <a href="auth?action=login_view" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm transition inline-flex items-center gap-1 h-8 sm:h-9 whitespace-nowrap">
+                            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
                             <span><?= __t('nav_login') ?></span>
                         </a>
                     <?php endif; ?>
