@@ -39,8 +39,8 @@ return array(
     'farm_location' => array(
         'region_name' => 'Kopargaon, Ahmednagar (कोपरगाव, अहिल्यानगर)',
         'state'       => 'Maharashtra',
-        'latitude'    => 19.8917,
-        'longitude'   => 74.4789,
+        'latitude'    => 19.9015464,
+        'longitude'   => 74.4921227,
         'elevation'   => 493,
     ),
     'database' => array(
