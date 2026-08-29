@@ -4,6 +4,7 @@ if (!defined('FASAL_ROOT')) {
 }
 
 require_once __DIR__ . '/../database.php';
+require_once __DIR__ . '/gdrive_backup.php';
 
 class BackupManager {
     private static function getBackupDir() {
@@ -19,10 +20,15 @@ class BackupManager {
         $backupDir = self::getBackupDir();
         $todayFile = $backupDir . '/daily_backup_' . $todayStr . '.json';
 
+        $localResult = null;
         if (!file_exists($todayFile)) {
-            return self::createBackup(false, 'Scheduled Daily Auto-Backup (' . $todayStr . ')');
+            $localResult = self::createBackup(false, 'Scheduled Daily Auto-Backup (' . $todayStr . ')');
         }
-        return null;
+
+        // Trigger Google Drive sync if webhook configured
+        @GDriveBackupManager::syncDisasterBackupToGDrive(false);
+
+        return $localResult;
     }
 
     public static function createBackup($isManual = false, $note = '') {
