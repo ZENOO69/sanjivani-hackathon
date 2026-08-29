@@ -1,13 +1,8 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Google Gemini AI Crop Doctor & Decision Engine
- * ====================================================================
- */
-
 header('Content-Type: application/json; charset=UTF-8');
 define('FASAL_ROOT', dirname(__DIR__));
 $config = require __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/security.php';
 require_once __DIR__ . '/../database.php';
 require_once __DIR__ . '/../includes/translations.php';
 
@@ -17,9 +12,9 @@ if (!$input) {
     $input = $_POST;
 }
 
-$query = trim(isset($input['query']) ? $input['query'] : '');
-$crop  = trim(isset($input['crop']) ? $input['crop'] : 'कांदा (Onion)');
-$lang  = trim(isset($input['lang']) ? $input['lang'] : 'mr');
+$query = Security::sanitizeString(isset($input['query']) ? $input['query'] : '');
+$crop  = Security::sanitizeString(isset($input['crop']) ? $input['crop'] : 'कांदा (Onion)');
+$lang  = Security::sanitizeString(isset($input['lang']) ? $input['lang'] : 'mr');
 
 if (empty($query)) {
     echo json_encode(array('success' => false, 'message' => 'Query is required'));
@@ -30,7 +25,6 @@ $geminiCfg = $config['gemini_api'];
 $apiKey = $geminiCfg['api_key'];
 $model = isset($geminiCfg['model']) ? $geminiCfg['model'] : 'gemini-1.5-flash';
 
-// Contextual prompt tailored for Kopargaon & Maharashtra agriculture
 $langName = ($lang === 'mr' ? 'Marathi (मराठी)' : ($lang === 'hi' ? 'Hindi (हिंदी)' : 'English'));
 $systemContext = "You are FASAL AI Doctor, an expert agronomist specializing in Maharashtra agriculture (Ahmednagar, Nashik, Vidarbha). 
 The farmer is growing {$crop} in Kopargaon region.
@@ -43,7 +37,6 @@ Keep it actionable, highly practical, and avoid unnecessary jargon.";
 
 $userPrompt = "{$systemContext}\n\nFarmer Question: {$query}";
 
-// Check if valid Gemini API key is configured
 if (!empty($apiKey) && strpos($apiKey, 'YOUR_GEMINI') === false) {
     $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
     
@@ -85,7 +78,6 @@ if (!empty($apiKey) && strpos($apiKey, 'YOUR_GEMINI') === false) {
     }
 }
 
-// Highly accurate expert agronomy engine for Maharashtra crops (Fallback & Offline-ready)
 $fallbackResponses = array(
     'mr' => "🌿 **FASAL AI पीक तज्ज्ञ सल्ला (कोपरगाव विभाग):**\n\n" .
             "1. **🩺 प्राथमिक निदान:**\n" .

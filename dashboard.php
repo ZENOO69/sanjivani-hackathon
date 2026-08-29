@@ -1,73 +1,79 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Unified Farmer Decision-Intelligence Dashboard
- * ====================================================================
- */
-
 define('FASAL_ROOT', __DIR__);
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/includes/blackout_engine.php';
 require_once __DIR__ . '/includes/translations.php';
 require_once __DIR__ . '/includes/header.php';
 
-// Fetch Advisories from DB
-$pdo = Database::getConnection();
+// Safe Fetch Advisories with HA Failover
+$rawAdvisories = BlackoutEngine::safeFetchAll('crop_advisories');
 $advisories = array();
-if ($pdo) {
-    try {
-        $stmt = $pdo->query("SELECT * FROM `crop_advisories` ORDER BY id DESC LIMIT 6");
-        while ($row = $stmt->fetch()) {
-            $advisories[] = array(
-                'id'          => $row['id'],
-                'category'    => HybridCrypto::decrypt($row['category']),
-                'title'       => HybridCrypto::decrypt($row['title']),
-                'description' => HybridCrypto::decrypt($row['description']),
-                'action_text' => HybridCrypto::decrypt($row['action_text']),
-                'action_link' => HybridCrypto::decrypt(isset($row['action_link']) ? $row['action_link'] : '#'),
-                'urgency'     => HybridCrypto::decrypt($row['urgency']),
-                'icon'        => isset($row['icon']) ? $row['icon'] : 'bell',
-            );
-        }
-    } catch (Exception $e) {
-        // Keep moving
-    }
+foreach ($rawAdvisories as $row) {
+    $advisories[] = array(
+        'id'          => $row['id'],
+        'category'    => HybridCrypto::decrypt($row['category']),
+        'title'       => HybridCrypto::decrypt($row['title']),
+        'description' => HybridCrypto::decrypt($row['description']),
+        'action_text' => HybridCrypto::decrypt($row['action_text']),
+        'action_link' => HybridCrypto::decrypt(isset($row['action_link']) ? $row['action_link'] : '#'),
+        'urgency'     => HybridCrypto::decrypt($row['urgency']),
+        'icon'        => isset($row['icon']) ? $row['icon'] : 'bell',
+    );
 }
 
-// Default fallback IoT readings
+// Fetch Live Real Data directly from ESP8266 IoT Cloud endpoint
+$getUrl = $config['iot']['get_url'];
+$ch = curl_init($getUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+$response = curl_exec($ch);
+curl_close($ch);
+
+$iotRecords = array();
 $iotData = array(
     'device_hash'   => $config['iot']['device_hash'],
-    'temperature'   => '31.5',
-    'humidity'      => '58',
-    'soil_raw'      => '640',
-    'soil_moisture' => '38',
-    'soil_status'   => 'MODERATE',
+    'temperature'   => '27.5',
+    'humidity'      => '72.0',
+    'soil_raw'      => '1024',
+    'soil_moisture' => '0',
+    'soil_status'   => 'DRY',
     'recorded_at'   => date('d-m-Y h:i A'),
 );
 
-if ($pdo) {
-    try {
-        $iotStmt = $pdo->query("SELECT * FROM `iot_sensor_logs` ORDER BY id DESC LIMIT 1");
-        if ($iotStmt) {
-            $latestLog = $iotStmt->fetch();
-            if ($latestLog) {
-                $iotData['temperature']   = HybridCrypto::decrypt($latestLog['temperature']);
-                $iotData['humidity']      = HybridCrypto::decrypt($latestLog['humidity']);
-                $iotData['soil_raw']      = HybridCrypto::decrypt($latestLog['soil_raw']);
-                $iotData['soil_moisture'] = HybridCrypto::decrypt($latestLog['soil_moisture']);
-                $iotData['soil_status']   = HybridCrypto::decrypt($latestLog['soil_status']);
-                $iotData['recorded_at']   = date('d-m-Y h:i A', strtotime($latestLog['recorded_at']));
-            }
+if (!empty($response)) {
+    $parsed = json_decode($response, true);
+    if (is_array($parsed)) {
+        $list = isset($parsed['data']) && is_array($parsed['data']) ? $parsed['data'] : (isset($parsed[0]) ? $parsed : array($parsed));
+        foreach ($list as $item) {
+            $iotRecords[] = array(
+                'id'            => isset($item['id']) ? $item['id'] : count($iotRecords) + 1,
+                'device_hash'   => isset($item['hash_id']) ? $item['hash_id'] : $config['iot']['device_hash'],
+                'temperature'   => isset($item['sensor1']) ? $item['sensor1'] : '0',
+                'humidity'      => isset($item['sensor2']) ? $item['sensor2'] : '0',
+                'soil_raw'      => isset($item['sensor3']) ? $item['sensor3'] : '0',
+                'soil_moisture' => isset($item['sensor4']) ? $item['sensor4'] : '0',
+                'soil_status'   => isset($item['sensor5']) ? $item['sensor5'] : 'DRY',
+                'datetime'      => isset($item['datetime']) ? $item['datetime'] : (isset($item['date']) ? $item['date'] . ' ' . $item['time'] : date('d-m-Y h:i A')),
+            );
         }
-    } catch (Exception $e) {
-        // Keep moving
+        if (!empty($iotRecords[0])) {
+            $iotData['temperature']   = (string)$iotRecords[0]['temperature'];
+            $iotData['humidity']      = (string)$iotRecords[0]['humidity'];
+            $iotData['soil_raw']      = (string)$iotRecords[0]['soil_raw'];
+            $iotData['soil_moisture'] = (string)$iotRecords[0]['soil_moisture'];
+            $iotData['soil_status']   = (string)$iotRecords[0]['soil_status'];
+            $iotData['recorded_at']   = (string)$iotRecords[0]['datetime'];
+        }
     }
 }
 ?>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1">
     
-    <!-- 1. WELCOME & FARM STATUS BANNER -->
+    <!-- Welcome & Farm Status Banner -->
     <div class="bg-gradient-to-r from-emerald-700 via-emerald-800 to-green-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-emerald-950/15 relative overflow-hidden">
         <div class="absolute -right-10 -bottom-10 opacity-15 text-9xl pointer-events-none select-none">🚜</div>
         
@@ -79,18 +85,17 @@ if ($pdo) {
                         <span><?= htmlspecialchars($config['farm_location']['region_name']) ?></span>
                     </span>
                     <span class="px-3 py-1 bg-amber-400 text-amber-950 rounded-full text-xs font-black">
-                        मुख्य पीक: <?= htmlspecialchars($userCrop) ?>
+                        मुख्य पीक: <?= Security::escape($userCrop) ?>
                     </span>
                 </div>
                 <h1 class="text-2xl sm:text-4xl font-black tracking-tight">
-                    राम राम, <?= htmlspecialchars($userName) ?>! 👋
+                    राम राम, <?= Security::escape($userName) ?>! 👋
                 </h1>
                 <p class="text-xs sm:text-sm text-emerald-100 max-w-2xl">
                     तुमच्या शेतातील थेट सेन्सर्स आणि कोपरगाव हवामान केंद्रानुसार आजचे तातडीचे निर्णय खालीलप्रमाणे आहेत:
                 </p>
             </div>
 
-            <!-- Quick Action Shortcut -->
             <div class="flex-shrink-0 flex items-center gap-3">
                 <a href="advisory" class="px-5 py-3.5 bg-white hover:bg-emerald-50 text-emerald-900 font-black rounded-2xl shadow-lg transition transform active:scale-95 flex items-center gap-2 text-sm">
                     <i data-lucide="sparkles" class="w-5 h-5 text-emerald-600"></i>
@@ -100,7 +105,7 @@ if ($pdo) {
         </div>
     </div>
 
-    <!-- 2. SECTION: ACTIONABLE ADVISORIES (Not Just Numbers - Core Hackathon Requirement!) -->
+    <!-- Actionable Advisories -->
     <div class="space-y-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
@@ -119,7 +124,6 @@ if ($pdo) {
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <!-- Advisory Card 1: Irrigation -->
             <div class="glass-card glass-card-hover rounded-3xl p-6 border-l-4 border-l-sky-500 flex flex-col justify-between space-y-4">
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
@@ -135,12 +139,12 @@ if ($pdo) {
                     </h3>
 
                     <p class="text-xs text-slate-600 leading-relaxed">
-                        जमिनीतील ओलावा सध्या <strong>३८% (MODERATE)</strong> वर आहे, परंतु उद्या दुपारी तापमान <strong>३६°C</strong> पर्यंत वाढेल. कांदा पिकाला ताण बसू नये म्हणून <strong>४५ मिनिटे</strong> पाणी द्यावे.
+                        जमिनीतील ओलावा सध्या <strong><?= Security::escape($iotData['soil_moisture']) ?>% (<?= Security::escape($iotData['soil_status']) ?>)</strong> वर आहे. कांदा व कापूस पिकाला ताण बसू नये म्हणून <strong>४५ मिनिटे</strong> पाणी द्यावे.
                     </p>
                 </div>
 
                 <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button data-voice-text="उद्या सकाळी सहा ते नऊ दरम्यान ठिबक सिंचन सुरू करा. जमिनीतील ओलावा अडतीस टक्के आहे. कांदा पिकाला पंचेचाळीस मिनिटे पाणी द्यावे." class="px-3 py-2 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
+                    <button data-voice-text="उद्या सकाळी सहा ते नऊ दरम्यान ठिबक सिंचन सुरू करा. जमिनीतील ओलावा कमी आहे. कांदा पिकाला पंचेचाळीस मिनिटे पाणी द्यावे." class="px-3 py-2 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
                         <i data-lucide="volume-2" class="w-4 h-4"></i>
                         <span><?= __t('listen_audio') ?></span>
                     </button>
@@ -151,7 +155,6 @@ if ($pdo) {
                 </div>
             </div>
 
-            <!-- Advisory Card 2: Mandi Selling Strategy -->
             <div class="glass-card glass-card-hover rounded-3xl p-6 border-l-4 border-l-amber-500 flex flex-col justify-between space-y-4">
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
@@ -183,7 +186,6 @@ if ($pdo) {
                 </div>
             </div>
 
-            <!-- Advisory Card 3: Pest Alert -->
             <div class="glass-card glass-card-hover rounded-3xl p-6 border-l-4 border-l-purple-500 flex flex-col justify-between space-y-4">
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
@@ -199,7 +201,7 @@ if ($pdo) {
                     </h3>
 
                     <p class="text-xs text-slate-600 leading-relaxed">
-                        हवेतील आर्द्रता ५८% वरून ७०% कडे जात आहे. प्रतिबंधासाठी <strong>अमिस्टार टॉप (१ मिली/लि)</strong> किंवा <strong>साफ बुरशीनाशक (२ ग्रॅम/लि)</strong> सोबत थायामेथोक्सम फवारा.
+                        हवेतील आर्द्रता सध्या <strong><?= Security::escape($iotData['humidity']) ?>%</strong> आहे. प्रतिबंधासाठी <strong>अमिस्टार टॉप (१ मिली/लि)</strong> किंवा <strong>साफ बुरशीनाशक (२ ग्रॅम/लि)</strong> सोबत थायामेथोक्सम फवारा.
                     </p>
                 </div>
 
@@ -218,10 +220,10 @@ if ($pdo) {
         </div>
     </div>
 
-    <!-- 3. SECTION: LIVE IOT SENSOR TELEMETRY & HYPER-LOCAL WEATHER -->
+    <!-- Live IoT Telemetry & Hyper-Local Weather -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8" id="iot-live-widget">
         
-        <!-- Left: IoT Hardware Telemetry (ESP8266 Live Telemetry) -->
+        <!-- IoT Hardware Telemetry -->
         <div class="lg:col-span-7 glass-card rounded-3xl p-6 sm:p-8 space-y-6">
             
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
@@ -231,14 +233,14 @@ if ($pdo) {
                     </div>
                     <div>
                         <h2 class="text-lg font-black text-slate-900"><?= __t('live_iot_connected') ?></h2>
-                        <p class="text-xs text-slate-500">हार्डवेअर ID: <code class="font-bold text-emerald-800"><?= htmlspecialchars($iotData['device_hash']) ?></code></p>
+                        <p class="text-xs text-slate-500">हार्डवेअर ID: <code class="font-bold text-emerald-800"><?= htmlspecialchars($config['iot']['device_hash']) ?></code></p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
                     <span class="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200" id="val-last-synced">
-                        <?= htmlspecialchars($iotData['recorded_at']) ?>
+                        <?= Security::escape($iotData['recorded_at']) ?>
                     </span>
                 </div>
             </div>
@@ -246,57 +248,59 @@ if ($pdo) {
             <!-- Metrics Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 
-                <!-- Soil Moisture -->
                 <div class="bg-gradient-to-b from-emerald-50 to-green-50/50 p-4 rounded-2xl border border-emerald-200/80 text-center space-y-1">
                     <div class="flex items-center justify-center text-emerald-700 mb-1">
                         <i data-lucide="droplets" class="w-5 h-5"></i>
                     </div>
                     <span class="text-xs font-bold text-emerald-900 block"><?= __t('soil_moisture') ?></span>
-                    <span class="text-3xl font-black text-emerald-950 easy-metric-val" id="val-soil-moisture"><?= htmlspecialchars($iotData['soil_moisture']) ?>%</span>
-                    <span class="text-[10px] text-emerald-700 font-semibold block">A0 Analog: <span id="val-soil-raw"><?= htmlspecialchars($iotData['soil_raw']) ?></span></span>
+                    <span class="text-3xl font-black text-emerald-950 easy-metric-val" id="val-soil-moisture"><?= Security::escape($iotData['soil_moisture']) ?>%</span>
+                    <span class="text-[10px] text-emerald-700 font-semibold block">A0 Raw: <span id="val-soil-raw"><?= Security::escape($iotData['soil_raw']) ?></span></span>
                 </div>
 
-                <!-- Soil Condition Status -->
                 <div class="bg-gradient-to-b from-sky-50 to-blue-50/50 p-4 rounded-2xl border border-sky-200/80 text-center space-y-1">
                     <div class="flex items-center justify-center text-sky-700 mb-1">
                         <i data-lucide="layers" class="w-5 h-5"></i>
                     </div>
                     <span class="text-xs font-bold text-sky-900 block"><?= __t('soil_status') ?></span>
                     <div class="pt-1">
-                        <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-black text-xs easy-badge" id="val-soil-status">
-                            <?= htmlspecialchars($iotData['soil_status']) ?>
+                        <?php 
+                            $statusClass = (strpos(strtoupper($iotData['soil_status']), 'DRY') !== false) 
+                                ? 'bg-rose-100 text-rose-800 border-rose-300' 
+                                : ((strpos(strtoupper($iotData['soil_status']), 'WET') !== false) 
+                                    ? 'bg-blue-100 text-blue-800 border-blue-300' 
+                                    : 'bg-emerald-100 text-emerald-800 border-emerald-300');
+                        ?>
+                        <span class="px-2.5 py-1 rounded-full font-black text-xs border <?= $statusClass ?>" id="val-soil-status">
+                            <?= Security::escape($iotData['soil_status']) ?>
                         </span>
                     </div>
-                    <span class="text-[10px] text-sky-700 font-semibold block pt-1">ओलावा पुरेशा प्रमाणात</span>
+                    <span class="text-[10px] text-sky-700 font-semibold block pt-1">थेट सेन्सर स्टेटस</span>
                 </div>
 
-                <!-- Field Temperature -->
                 <div class="bg-gradient-to-b from-amber-50 to-orange-50/50 p-4 rounded-2xl border border-amber-200/80 text-center space-y-1">
                     <div class="flex items-center justify-center text-amber-700 mb-1">
                         <i data-lucide="thermometer" class="w-5 h-5"></i>
                     </div>
                     <span class="text-xs font-bold text-amber-900 block"><?= __t('field_temp') ?></span>
-                    <span class="text-3xl font-black text-amber-950 easy-metric-val" id="val-temperature"><?= htmlspecialchars($iotData['temperature']) ?> °C</span>
+                    <span class="text-3xl font-black text-amber-950 easy-metric-val" id="val-temperature"><?= Security::escape($iotData['temperature']) ?> °C</span>
                     <span class="text-[10px] text-amber-700 font-semibold block">DHT11 Sensor</span>
                 </div>
 
-                <!-- Air Humidity -->
                 <div class="bg-gradient-to-b from-teal-50 to-cyan-50/50 p-4 rounded-2xl border border-teal-200/80 text-center space-y-1">
                     <div class="flex items-center justify-center text-teal-700 mb-1">
                         <i data-lucide="wind" class="w-5 h-5"></i>
                     </div>
                     <span class="text-xs font-bold text-teal-900 block"><?= __t('field_humidity') ?></span>
-                    <span class="text-3xl font-black text-teal-950 easy-metric-val" id="val-humidity"><?= htmlspecialchars($iotData['humidity']) ?>%</span>
-                    <span class="text-[10px] text-teal-700 font-semibold block">वातावरण अनुकूल</span>
+                    <span class="text-3xl font-black text-teal-950 easy-metric-val" id="val-humidity"><?= Security::escape($iotData['humidity']) ?>%</span>
+                    <span class="text-[10px] text-teal-700 font-semibold block">हवामान आर्द्रता</span>
                 </div>
 
             </div>
 
-            <!-- IoT Hardware Sync Info Box -->
             <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                 <div class="flex items-center gap-2 text-slate-700">
                     <i data-lucide="wifi" class="w-4 h-4 text-emerald-600"></i>
-                    <span>Wi-Fi Endpoint: <code class="text-slate-600"><?= htmlspecialchars($config['iot']['get_url']) ?></code></span>
+                    <span>Live API Endpoint: <code class="text-slate-600 font-bold"><?= htmlspecialchars($config['iot']['get_url']) ?></code></span>
                 </div>
                 <button onclick="location.reload()" class="text-emerald-700 font-bold hover:underline flex items-center gap-1">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
@@ -306,7 +310,7 @@ if ($pdo) {
 
         </div>
 
-        <!-- Right: Hyper-Local Weather (Open-Meteo GPS Engine) -->
+        <!-- Hyper-Local Weather -->
         <div class="lg:col-span-5 glass-card rounded-3xl p-6 sm:p-8 space-y-6 flex flex-col justify-between">
             
             <div class="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -325,7 +329,6 @@ if ($pdo) {
                 </span>
             </div>
 
-            <!-- Main Weather Highlight -->
             <div class="flex items-center justify-between bg-gradient-to-r from-sky-50 to-indigo-50/60 p-4 rounded-2xl border border-sky-100">
                 <div>
                     <div class="text-3xl sm:text-4xl font-black text-slate-900">32°C</div>
@@ -337,7 +340,6 @@ if ($pdo) {
                 </div>
             </div>
 
-            <!-- Weather Details Grid -->
             <div class="grid grid-cols-2 gap-3 text-xs">
                 <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center gap-2.5">
                     <i data-lucide="cloud-rain" class="w-5 h-5 text-sky-600"></i>
@@ -356,7 +358,6 @@ if ($pdo) {
                 </div>
             </div>
 
-            <!-- 3-Day Simple Bar -->
             <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-center text-xs font-bold text-slate-700">
                 <div class="space-y-0.5">
                     <span class="text-[10px] text-slate-400 block font-normal">आज</span>
@@ -380,7 +381,108 @@ if ($pdo) {
 
     </div>
 
-    <!-- 4. SECTION: COMMUNITY MACHINERY & LABOUR DISPATCH (Closed Loop Action) -->
+    <!-- ESP8266 Sensor Records Table -->
+    <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6 shadow-md border border-emerald-100">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md shadow-emerald-600/30">
+                    📊
+                </div>
+                <div>
+                    <h2 class="text-lg font-black text-slate-900">ESP8266 थेट सेन्सर नोंदी (Telemetry Log History)</h2>
+                    <p class="text-xs text-slate-500">
+                        एकूण नोंदी: <strong class="text-emerald-800" id="total-records-count"><?= count($iotRecords) ?></strong> • Source: <code><?= htmlspecialchars($config['iot']['get_url']) ?></code>
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <input type="text" id="telemetry-search" oninput="filterTelemetryTable()" placeholder="तारीख किंवा स्थिती शोधा..." class="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                <button onclick="fetchLatestTelemetry()" class="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 transition flex items-center gap-1">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <span>सिंक करा</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-700" id="telemetry-table">
+                <thead class="text-[11px] uppercase bg-slate-100 text-slate-600 font-extrabold">
+                    <tr>
+                        <th class="py-3 px-4 rounded-l-xl">ID</th>
+                        <th class="py-3 px-4">तारीख व वेळ (Timestamp)</th>
+                        <th class="py-3 px-4">तापमान (°C)</th>
+                        <th class="py-3 px-4">हवेतील आर्द्रता (%)</th>
+                        <th class="py-3 px-4">माती Raw (A0)</th>
+                        <th class="py-3 px-4">ओलावा (%)</th>
+                        <th class="py-3 px-4 rounded-r-xl">जमीन स्थिती (Status)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium" id="telemetry-tbody">
+                    <?php if (!empty($iotRecords)): ?>
+                        <?php foreach ($iotRecords as $row): ?>
+                            <tr class="telemetry-row hover:bg-slate-50 transition" 
+                                data-id="<?= Security::escape($row['id']) ?>"
+                                data-date="<?= Security::escape($row['datetime']) ?>"
+                                data-status="<?= Security::escape($row['soil_status']) ?>">
+                                <td class="py-3.5 px-4 font-bold text-slate-900">#<?= Security::escape($row['id']) ?></td>
+                                <td class="py-3.5 px-4 text-slate-600 flex items-center gap-1.5">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+                                    <span><?= Security::escape($row['datetime']) ?></span>
+                                </td>
+                                <td class="py-3.5 px-4 font-bold text-amber-900"><?= Security::escape($row['temperature']) ?> °C</td>
+                                <td class="py-3.5 px-4 font-bold text-teal-900"><?= Security::escape($row['humidity']) ?> %</td>
+                                <td class="py-3.5 px-4 text-slate-500 font-mono"><?= Security::escape($row['soil_raw']) ?></td>
+                                <td class="py-3.5 px-4 font-black text-emerald-900"><?= Security::escape($row['soil_moisture']) ?> %</td>
+                                <td class="py-3.5 px-4">
+                                    <?php 
+                                        $s = strtoupper($row['soil_status']);
+                                        if (strpos($s, 'DRY') !== false) {
+                                            echo '<span class="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-full font-bold text-[10px] border border-rose-200">DRY</span>';
+                                        } elseif (strpos($s, 'WET') !== false) {
+                                            echo '<span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full font-bold text-[10px] border border-blue-200">WET</span>';
+                                        } else {
+                                            echo '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px] border border-emerald-200">MODERATE</span>';
+                                        }
+                                    ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="7" class="py-8 text-center text-slate-400">
+                                कोणतीही सेन्सर नोंद उपलब्ध नाही.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-100 text-xs">
+            <div class="text-slate-500">
+                दाखवत आहे <span id="page-start" class="font-bold text-slate-800">1</span> ते <span id="page-end" class="font-bold text-slate-800">10</span> (एकूण <span id="page-total" class="font-bold text-slate-800"><?= count($iotRecords) ?></span> नोंदी)
+            </div>
+
+            <div class="flex items-center gap-1.5 self-center">
+                <button onclick="prevTelemetryPage()" id="btn-prev-page" class="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    <span>मागील (Prev)</span>
+                </button>
+
+                <div id="page-numbers-container" class="flex items-center gap-1"></div>
+
+                <button onclick="nextTelemetryPage()" id="btn-next-page" class="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1">
+                    <span>पुढील (Next)</span>
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Community Machinery & Labour Dispatch -->
     <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
@@ -467,5 +569,94 @@ if ($pdo) {
     </div>
 
 </div>
+
+<script>
+    let currentPage = 1;
+    const pageSize = 10;
+    let allRows = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        allRows = Array.from(document.querySelectorAll('.telemetry-row'));
+        renderTelemetryPage(1);
+    });
+
+    function renderTelemetryPage(page) {
+        currentPage = page;
+        const visibleRows = allRows.filter(r => r.getAttribute('data-hidden') !== 'true');
+        const total = visibleRows.length;
+        const totalPages = Math.ceil(total / pageSize) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const start = (currentPage - 1) * pageSize;
+        const end = Math.min(start + pageSize, total);
+
+        visibleRows.forEach((row, idx) => {
+            if (idx >= start && idx < end) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        document.getElementById('page-start').innerText = total > 0 ? (start + 1) : 0;
+        document.getElementById('page-end').innerText = end;
+        document.getElementById('page-total').innerText = total;
+
+        document.getElementById('btn-prev-page').disabled = (currentPage === 1);
+        document.getElementById('btn-next-page').disabled = (currentPage === totalPages || total === 0);
+
+        const numContainer = document.getElementById('page-numbers-container');
+        numContainer.innerHTML = '';
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                const btn = document.createElement('button');
+                btn.innerText = i;
+                btn.className = `w-8 h-8 rounded-xl font-bold text-xs transition ${i === currentPage ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'}`;
+                btn.onclick = () => renderTelemetryPage(i);
+                numContainer.appendChild(btn);
+            }
+        }
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function prevTelemetryPage() {
+        if (currentPage > 1) renderTelemetryPage(currentPage - 1);
+    }
+
+    function nextTelemetryPage() {
+        renderTelemetryPage(currentPage + 1);
+    }
+
+    function filterTelemetryTable() {
+        const query = document.getElementById('telemetry-search').value.toLowerCase().trim();
+        allRows.forEach(row => {
+            const date = (row.getAttribute('data-date') || '').toLowerCase();
+            const status = (row.getAttribute('data-status') || '').toLowerCase();
+            const id = (row.getAttribute('data-id') || '').toLowerCase();
+
+            if (date.includes(query) || status.includes(query) || id.includes(query)) {
+                row.removeAttribute('data-hidden');
+            } else {
+                row.setAttribute('data-hidden', 'true');
+            }
+        });
+        renderTelemetryPage(1);
+    }
+
+    async function fetchLatestTelemetry() {
+        try {
+            const res = await fetch('api/iot-sync?action=all');
+            const json = await res.json();
+            if (json.success && json.records) {
+                location.reload();
+            }
+        } catch (e) {
+            location.reload();
+        }
+    }
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

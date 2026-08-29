@@ -1,44 +1,31 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Maharashtra APMC Mandi Rates & Profit Maximizer
- * ====================================================================
- */
-
 define('FASAL_ROOT', __DIR__);
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/includes/blackout_engine.php';
 require_once __DIR__ . '/includes/translations.php';
 require_once __DIR__ . '/includes/header.php';
 
-$pdo = Database::getConnection();
+$rawMandi = BlackoutEngine::safeFetchAll('mandi_prices');
 $mandiRows = array();
-if ($pdo) {
-    try {
-        $stmt = $pdo->query("SELECT * FROM `mandi_prices` ORDER BY id ASC");
-        while ($row = $stmt->fetch()) {
-            $mandiRows[] = array(
-                'id'       => $row['id'],
-                'code'     => $row['commodity_code'],
-                'name'     => HybridCrypto::decrypt($row['commodity_name']),
-                'market'   => HybridCrypto::decrypt($row['market_name']),
-                'min'      => HybridCrypto::decrypt($row['min_price']),
-                'max'      => HybridCrypto::decrypt($row['max_price']),
-                'modal'    => HybridCrypto::decrypt($row['modal_price']),
-                'trend'    => HybridCrypto::decrypt($row['price_trend']),
-                'percent'  => HybridCrypto::decrypt($row['trend_percentage']),
-                'updated'  => date('d M, h:i A', strtotime(isset($row['updated_at']) ? $row['updated_at'] : 'now')),
-            );
-        }
-    } catch (Exception $e) {
-        // Keep moving
-    }
+foreach ($rawMandi as $row) {
+    $mandiRows[] = array(
+        'id'       => $row['id'],
+        'code'     => isset($row['commodity_code']) ? $row['commodity_code'] : 'crop',
+        'name'     => HybridCrypto::decrypt($row['commodity_name']),
+        'market'   => HybridCrypto::decrypt($row['market_name']),
+        'min'      => HybridCrypto::decrypt($row['min_price']),
+        'max'      => HybridCrypto::decrypt($row['max_price']),
+        'modal'    => HybridCrypto::decrypt($row['modal_price']),
+        'trend'    => HybridCrypto::decrypt($row['price_trend']),
+        'percent'  => HybridCrypto::decrypt($row['trend_percentage']),
+        'updated'  => date('d M, h:i A', strtotime(isset($row['updated_at']) ? $row['updated_at'] : 'now')),
+    );
 }
 ?>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1">
     
-    <!-- Top Hero Banner -->
     <div class="bg-gradient-to-r from-amber-600 via-emerald-700 to-green-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-emerald-950/15 relative overflow-hidden">
         <div class="absolute -right-8 -bottom-8 opacity-20 text-9xl select-none">📈</div>
         
@@ -56,7 +43,7 @@ if ($pdo) {
         </div>
     </div>
 
-    <!-- 1. MANDI PROFIT MAXIMIZER CALCULATOR (Actionable Decision Maker) -->
+    <!-- Mandi Profit Maximizer Calculator -->
     <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6 border-2 border-amber-300 shadow-lg">
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
@@ -98,7 +85,6 @@ if ($pdo) {
             </div>
         </div>
 
-        <!-- Calculated Result Output Card -->
         <div id="calc-result-box" class="p-5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 space-y-3">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-extrabold uppercase text-emerald-800 flex items-center gap-1.5">
@@ -117,7 +103,7 @@ if ($pdo) {
 
     </div>
 
-    <!-- 2. LIVE APMC RATES TABLE -->
+    <!-- Live APMC Rates Table -->
     <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
         
         <div class="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -149,20 +135,20 @@ if ($pdo) {
                             <tr class="hover:bg-slate-50/80 transition font-medium">
                                 <td class="py-4 px-4 font-bold text-slate-900 flex items-center gap-2">
                                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                    <span><?= htmlspecialchars($row['name']) ?></span>
+                                    <span><?= Security::escape($row['name']) ?></span>
                                 </td>
-                                <td class="py-4 px-4 text-slate-600"><?= htmlspecialchars($row['market']) ?></td>
-                                <td class="py-4 px-4 text-slate-500">₹<?= htmlspecialchars($row['min']) ?></td>
-                                <td class="py-4 px-4 text-slate-500">₹<?= htmlspecialchars($row['max']) ?></td>
-                                <td class="py-4 px-4 font-black text-base text-emerald-800">₹<?= htmlspecialchars($row['modal']) ?> / Q</td>
+                                <td class="py-4 px-4 text-slate-600"><?= Security::escape($row['market']) ?></td>
+                                <td class="py-4 px-4 text-slate-500">₹<?= Security::escape($row['min']) ?></td>
+                                <td class="py-4 px-4 text-slate-500">₹<?= Security::escape($row['max']) ?></td>
+                                <td class="py-4 px-4 font-black text-base text-emerald-800">₹<?= Security::escape($row['modal']) ?> / Q</td>
                                 <td class="py-4 px-4">
                                     <?php if ($row['trend'] === 'up'): ?>
                                         <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold text-xs rounded-full flex items-center gap-1 w-max">
-                                            ▲ <?= htmlspecialchars($row['percent']) ?>
+                                            ▲ <?= Security::escape($row['percent']) ?>
                                         </span>
                                     <?php elseif ($row['trend'] === 'down'): ?>
                                         <span class="px-2.5 py-1 bg-rose-100 text-rose-800 font-bold text-xs rounded-full flex items-center gap-1 w-max">
-                                            ▼ <?= htmlspecialchars($row['percent']) ?>
+                                            ▼ <?= Security::escape($row['percent']) ?>
                                         </span>
                                     <?php else: ?>
                                         <span class="px-2.5 py-1 bg-slate-100 text-slate-700 font-bold text-xs rounded-full flex items-center gap-1 w-max">

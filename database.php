@@ -1,12 +1,7 @@
 <?php
 /**
- * ====================================================================
  * FASAL - Database & Hybrid Cryptography Engine
- * ====================================================================
- * Features:
- * 1. Self-Migrating Schema (Zero-Config DB Creation & Table Updates)
- * 2. Hybrid Cryptography (AES-256-GCM / CBC + Blind Indexing with HMAC-SHA256)
- * 3. PDO Singleton with Prepared Statement security against SQLi
+ * SQLi-protected PDO singleton, AES-256-CBC encryption, HMAC-SHA256 blind indexing
  */
 
 if (!defined('FASAL_ROOT')) {
@@ -14,17 +9,14 @@ if (!defined('FASAL_ROOT')) {
 }
 
 $GLOBALS['FASAL_CONFIG'] = require __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/security.php';
 
-/**
- * Class HybridCrypto
- * Implements AES-256-GCM / CBC encryption with HMAC-SHA256 blind indexing
- */
 class HybridCrypto {
     private static function getKey() {
         $rawKey = isset($GLOBALS['FASAL_CONFIG']['crypto']['master_key']) 
             ? $GLOBALS['FASAL_CONFIG']['crypto']['master_key'] 
             : 'fasal_default_super_secret_key_32b';
-        return hash('sha256', $rawKey, true); // Exactly 32 bytes
+        return hash('sha256', $rawKey, true);
     }
 
     private static function getSalt() {
@@ -33,9 +25,6 @@ class HybridCrypto {
             : 'fasal_default_salt';
     }
 
-    /**
-     * Encrypt plaintext into Base64 encoded payload: IV:TAG:CIPHERTEXT
-     */
     public static function encrypt($plaintext) {
         if ($plaintext === null || $plaintext === '') {
             return '';
@@ -53,23 +42,20 @@ class HybridCrypto {
         );
 
         if ($encrypted === false) {
-            return $plaintext; // Fallback
+            return $plaintext;
         }
 
         $tag = hash_hmac('sha256', $encrypted, self::getKey(), true);
         return base64_encode($iv . ':::' . $tag . ':::' . $encrypted);
     }
 
-    /**
-     * Decrypt Base64 encoded payload: IV:TAG:CIPHERTEXT
-     */
     public static function decrypt($payload) {
         if (empty($payload)) {
             return '';
         }
         $raw = base64_decode($payload, true);
         if ($raw === false || strpos($raw, ':::') === false) {
-            return $payload; // Return as-is if not encrypted
+            return $payload;
         }
 
         $parts = explode(':::', $raw, 3);
@@ -81,10 +67,9 @@ class HybridCrypto {
         $tag = $parts[1];
         $ciphertext = $parts[2];
 
-        // Verify MAC
         $expectedTag = hash_hmac('sha256', $ciphertext, self::getKey(), true);
         if ($tag !== $expectedTag) {
-            // Tampered or invalid key
+            // Tampered payload
         }
 
         $cipher = 'aes-256-cbc';
@@ -99,9 +84,6 @@ class HybridCrypto {
         return $decrypted !== false ? $decrypted : $payload;
     }
 
-    /**
-     * Deterministic blind index for queryable fields (e.g. Email lookup)
-     */
     public static function blindIndex($value) {
         if ($value === null || $value === '') {
             return '';
@@ -111,10 +93,6 @@ class HybridCrypto {
     }
 }
 
-/**
- * Class Database
- * Handles auto-migration and connection management
- */
 class Database {
     private static $pdo = null;
 
@@ -132,7 +110,6 @@ class Database {
         $charset = $dbCfg['charset'];
 
         try {
-            // First connect without dbname to ensure database exists
             $dsnNoDb = "mysql:host={$host};port={$port};charset={$charset}";
             $rootPdo = new PDO($dsnNoDb, $user, $pass, array(
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -140,7 +117,6 @@ class Database {
             ));
             $rootPdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbname}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
-            // Now connect to the database
             $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset={$charset}";
             self::$pdo = new PDO($dsn, $user, $pass, array(
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -148,24 +124,18 @@ class Database {
                 PDO::ATTR_EMULATE_PREPARES => false,
             ));
 
-            // Run self-migrating schema
             self::migrateSchema(self::$pdo);
 
         } catch (PDOException $e) {
-            // Fallback or warning if offline MySQL
             return null;
         }
 
         return self::$pdo;
     }
 
-    /**
-     * Self-Migrating Database Schema
-     * Automatically creates tables, indexes, and seed records if not present
-     */
     private static function migrateSchema($pdo) {
         if (!$pdo) return;
-        // 1. Users Table (Fully encrypted except id, hashes, lang, timestamps)
+        
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `users` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -188,7 +158,6 @@ class Database {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // 2. IoT Sensor Logs Table
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `iot_sensor_logs` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -204,7 +173,6 @@ class Database {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // 3. APMC Mandi Prices Table
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `mandi_prices` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -221,7 +189,6 @@ class Database {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // 4. Crop Advisories Table
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `crop_advisories` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -237,7 +204,6 @@ class Database {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // 5. Machinery & Equipment Listings (Community Pool)
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `machinery_listings` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -251,7 +217,6 @@ class Database {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // 6. Farm Labour Pools Table
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `labour_listings` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -266,7 +231,6 @@ class Database {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // 7. OTP Verification Table
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS `otp_codes` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -279,16 +243,12 @@ class Database {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // Seed initial data if tables are empty
         self::seedDefaultData($pdo);
     }
 
-    /**
-     * Seeds initial APMC data, community machinery, and sample advisories
-     */
     private static function seedDefaultData($pdo) {
         if (!$pdo) return;
-        // Seed Mandi Prices if empty
+        
         $stmt = $pdo->query("SELECT COUNT(*) FROM `mandi_prices`");
         if ($stmt && $stmt->fetchColumn() == 0) {
             $defaultMandi = array(
@@ -320,7 +280,6 @@ class Database {
             }
         }
 
-        // Seed Machinery listings if empty
         $stmt = $pdo->query("SELECT COUNT(*) FROM `machinery_listings`");
         if ($stmt && $stmt->fetchColumn() == 0) {
             $defaultMachinery = array(
@@ -345,7 +304,6 @@ class Database {
             }
         }
 
-        // Seed Labour pool if empty
         $stmt = $pdo->query("SELECT COUNT(*) FROM `labour_listings`");
         if ($stmt && $stmt->fetchColumn() == 0) {
             $defaultLabour = array(
@@ -370,7 +328,6 @@ class Database {
             }
         }
 
-        // Seed Default Advisories if empty
         $stmt = $pdo->query("SELECT COUNT(*) FROM `crop_advisories`");
         if ($stmt && $stmt->fetchColumn() == 0) {
             $defaultAdv = array(

@@ -1,10 +1,4 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Public Landing Page & Before/After Platform Showcase
- * ====================================================================
- */
-
 define('FASAL_ROOT', __DIR__);
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
@@ -14,14 +8,12 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Hero Section -->
 <section class="relative overflow-hidden bg-gradient-to-b from-emerald-50 via-white to-green-50/40 py-12 sm:py-20">
-    <!-- Decorative background elements -->
     <div class="absolute -top-24 -left-24 w-96 h-96 bg-emerald-300/20 rounded-full blur-3xl pointer-events-none"></div>
     <div class="absolute top-1/2 -right-24 w-96 h-96 bg-amber-300/20 rounded-full blur-3xl pointer-events-none"></div>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             
-            <!-- Left Column: Copy & Value Proposition -->
             <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
                 
                 <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/90 border border-emerald-300 text-emerald-900 text-xs sm:text-sm font-extrabold shadow-sm">
@@ -40,7 +32,6 @@ require_once __DIR__ . '/includes/header.php';
                     हवामान, मातीतील ओलावा (IoT ESP8266), बाजार भाव (APMC) आणि AI पीक रोग निदान एकाच ठिकाणी. <strong>कधी पाणी द्यावे, केव्हा विकावे आणि कोणती फवारणी करावी</strong> हे ठरवा एका क्लिकवर!
                 </p>
 
-                <!-- CTA Action Buttons -->
                 <div class="flex flex-col sm:flex-row items-center gap-3 pt-2 justify-center lg:justify-start">
                     <a href="dashboard" class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-extrabold rounded-2xl shadow-xl shadow-emerald-600/30 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 text-base">
                         <span>डॅशबोर्ड उघडा (Open Dashboard)</span>
@@ -53,7 +44,6 @@ require_once __DIR__ . '/includes/header.php';
                     </button>
                 </div>
 
-                <!-- Trust Micro-Badges -->
                 <div class="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-4 text-xs text-slate-500 font-medium">
                     <div class="flex items-center gap-1.5">
                         <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
@@ -71,17 +61,13 @@ require_once __DIR__ . '/includes/header.php';
 
             </div>
 
-            <!-- Right Column: Interactive Live Card Preview -->
             <div class="lg:col-span-5">
                 <div class="relative mx-auto max-w-sm sm:max-w-md">
                     
-                    <!-- Decorative glowing back card -->
                     <div class="absolute inset-0 bg-gradient-to-r from-emerald-500 to-green-400 rounded-3xl transform rotate-2 scale-105 opacity-20 blur-lg"></div>
 
-                    <!-- Main Showcase Card -->
                     <div class="relative bg-white/95 backdrop-blur-xl border border-emerald-200/80 rounded-3xl p-6 shadow-2xl shadow-emerald-950/10 space-y-4">
                         
-                        <!-- Header of Card -->
                         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                             <div class="flex items-center gap-2">
                                 <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
@@ -92,7 +78,6 @@ require_once __DIR__ . '/includes/header.php';
                             </span>
                         </div>
 
-                        <!-- Real-time IoT Metrics Grid -->
                         <div class="grid grid-cols-2 gap-3">
                             <div class="bg-gradient-to-br from-emerald-50 to-green-50/60 p-3.5 rounded-2xl border border-emerald-100 text-center">
                                 <span class="text-[11px] font-bold text-emerald-800 block mb-1">मातीतील ओलावा</span>
@@ -107,7 +92,6 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                         </div>
 
-                        <!-- Live Action Advisory Box -->
                         <div class="bg-emerald-900 text-white p-4 rounded-2xl space-y-2 shadow-inner">
                             <div class="flex items-center justify-between text-xs text-emerald-300 font-bold">
                                 <span>⚡ तात्काळ शिफारस (Actionable)</span>
@@ -135,7 +119,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- SECTION 2: BEFORE VS AFTER COMPARISON MATRIX (Core Requirement of Problem Statement) -->
+<!-- Section 2: Before vs After Comparison Matrix -->
 <section class="py-16 bg-white border-y border-slate-200/80">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -154,7 +138,6 @@ require_once __DIR__ . '/includes/header.php';
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             
-            <!-- BEFORE / TRADITIONAL COLUMN -->
             <div class="bg-rose-50/60 rounded-3xl p-6 sm:p-8 border-2 border-rose-200/80 space-y-6 shadow-sm">
                 <div class="flex items-center gap-3 pb-4 border-b border-rose-200">
                     <div class="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center font-black text-lg">
@@ -205,7 +188,6 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
             </div>
 
-            <!-- AFTER / FASAL SMART PLATFORM COLUMN -->
             <div class="bg-emerald-50/70 rounded-3xl p-6 sm:p-8 border-2 border-emerald-300 space-y-6 shadow-md relative overflow-hidden">
                 <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl">🌾</div>
 
@@ -263,7 +245,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- SECTION 3: THE 6 CORE DATA STREAMS -->
+<!-- Section 3: The 6 Core Data Streams -->
 <section class="py-16 bg-slate-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -278,7 +260,6 @@ require_once __DIR__ . '/includes/header.php';
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            <!-- Stream 1 -->
             <div class="glass-card glass-card-hover p-6 rounded-3xl space-y-3">
                 <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-xl">
                     📟
@@ -289,7 +270,6 @@ require_once __DIR__ . '/includes/header.php';
                 </p>
             </div>
 
-            <!-- Stream 2 -->
             <div class="glass-card glass-card-hover p-6 rounded-3xl space-y-3">
                 <div class="w-12 h-12 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-black text-xl">
                     🌦️
@@ -300,7 +280,6 @@ require_once __DIR__ . '/includes/header.php';
                 </p>
             </div>
 
-            <!-- Stream 3 -->
             <div class="glass-card glass-card-hover p-6 rounded-3xl space-y-3">
                 <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-black text-xl">
                     📈
@@ -311,7 +290,6 @@ require_once __DIR__ . '/includes/header.php';
                 </p>
             </div>
 
-            <!-- Stream 4 -->
             <div class="glass-card glass-card-hover p-6 rounded-3xl space-y-3">
                 <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-black text-xl">
                     🤖
@@ -322,7 +300,6 @@ require_once __DIR__ . '/includes/header.php';
                 </p>
             </div>
 
-            <!-- Stream 5 -->
             <div class="glass-card glass-card-hover p-6 rounded-3xl space-y-3">
                 <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center font-black text-xl">
                     🚜
@@ -333,7 +310,6 @@ require_once __DIR__ . '/includes/header.php';
                 </p>
             </div>
 
-            <!-- Stream 6 -->
             <div class="glass-card glass-card-hover p-6 rounded-3xl space-y-3">
                 <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center font-black text-xl">
                     🏛️

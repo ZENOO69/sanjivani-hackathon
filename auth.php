@@ -1,31 +1,11 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Authentication Handler
- * ====================================================================
- * Features:
- * - Persistent Secure Sessions
- * - Google OAuth 2.0 Integration
- * - Normal Email Registration & Login with OTP Verification
- * - Forgot Password with Email OTP Reset
- * - CSRF Protection & Hybrid Encrypted User Storage
- */
-
 define('FASAL_ROOT', __DIR__);
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/includes/blackout_engine.php';
 require_once __DIR__ . '/includes/translations.php';
 
-// Generate CSRF Token if not exists
-if (empty($_SESSION['csrf_token'])) {
-    if (function_exists('random_bytes')) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    } else {
-        $_SESSION['csrf_token'] = md5(uniqid(mt_rand(), true));
-    }
-}
-
-// Auto detect google callback if code parameter exists
 if (isset($_GET['code'])) {
     $action = 'google_callback';
 } else {
@@ -35,7 +15,6 @@ if (isset($_GET['code'])) {
 $error = '';
 $success = '';
 
-// Helper: send OTP email or log for demo
 function sendOtpEmail($email, $otp, $purpose) {
     global $config;
     $smtp = $config['smtp'];
@@ -47,13 +26,10 @@ function sendOtpEmail($email, $otp, $purpose) {
     $_SESSION['last_generated_otp'] = $otp;
 }
 
-// --------------------------------------------------------------------
-// 1. Google OAuth 2.0 Redirect & Callback
-// --------------------------------------------------------------------
+// Google OAuth
 if ($action === 'google_login') {
     $oauth = $config['google_oauth'];
     if (empty($oauth['client_id']) || strpos($oauth['client_id'], 'YOUR_GOOGLE') !== false) {
-        // Mock Google login for hackathon demo if keys not filled
         $_SESSION['user_id'] = 1;
         $_SESSION['user_name'] = 'Ramesh Patil (रमेश पाटील)';
         $_SESSION['user_email'] = 'ramesh.patil.farmer@gmail.com';
@@ -69,7 +45,7 @@ if ($action === 'google_login') {
         'redirect_uri'  => $oauth['redirect_uri'],
         'response_type' => 'code',
         'scope'         => 'openid email profile',
-        'state'         => $_SESSION['csrf_token'],
+        'state'         => Security::getCsrfToken(),
         'access_type'   => 'online',
         'prompt'        => 'select_account',
     );
@@ -81,7 +57,6 @@ if ($action === 'google_callback' && isset($_GET['code'])) {
     $oauth = $config['google_oauth'];
     $code = $_GET['code'];
 
-    // Exchange token
     $tokenUrl = 'https://oauth2.googleapis.com/token';
     $postData = array(
         'code'          => $code,
@@ -102,7 +77,6 @@ if ($action === 'google_callback' && isset($_GET['code'])) {
 
     $tokenInfo = json_decode($response, true);
     if (!empty($tokenInfo['access_token'])) {
-        // Fetch User Info
         $userInfoUrl = 'https://www.googleapis.com/oauth2/v2/userinfo';
         $ch2 = curl_init($userInfoUrl);
         curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
@@ -131,17 +105,28 @@ if ($action === 'google_callback' && isset($_GET['code'])) {
                     $_SESSION['farm_location'] = HybridCrypto::decrypt(isset($user['farm_location']) ? $user['farm_location'] : '');
                 } else {
                     $gName = isset($googleUser['name']) ? $googleUser['name'] : 'Kisan Member';
+                    $userData = array(
+                        'email_hash' => $emailHash,
+                        'google_id_hash' => $googleIdHash,
+                        'full_name' => HybridCrypto::encrypt($gName),
+                        'email' => HybridCrypto::encrypt($googleUser['email']),
+                        'preferred_lang' => 'mr',
+                        'farm_location' => HybridCrypto::encrypt('Kopargaon, Ahmednagar'),
+                        'primary_crop' => HybridCrypto::encrypt('Onion & Cotton'),
+                    );
+                    BlackoutEngine::recordMutation('users', 'INSERT', $userData);
+
                     $ins = $pdo->prepare("
                         INSERT INTO `users` (`email_hash`, `google_id_hash`, `full_name`, `email`, `preferred_lang`, `farm_location`, `primary_crop`)
                         VALUES (?, ?, ?, ?, 'mr', ?, ?)
                     ");
                     $ins->execute(array(
-                        $emailHash,
-                        $googleIdHash,
-                        HybridCrypto::encrypt($gName),
-                        HybridCrypto::encrypt($googleUser['email']),
-                        HybridCrypto::encrypt('Kopargaon, Ahmednagar'),
-                        HybridCrypto::encrypt('Onion & Cotton'),
+                        $userData['email_hash'],
+                        $userData['google_id_hash'],
+                        $userData['full_name'],
+                        $userData['email'],
+                        $userData['farm_location'],
+                        $userData['primary_crop'],
                     ));
                     $newId = $pdo->lastInsertId();
                     $_SESSION['user_id'] = $newId;
@@ -162,27 +147,22 @@ if ($action === 'google_callback' && isset($_GET['code'])) {
             exit;
         }
     } else {
-        $error = 'Google लॉगिन अयशस्वी. कृपया पुन्हा प्रयत्न करा. (' . (isset($tokenInfo['error_description']) ? $tokenInfo['error_description'] : 'Token Error') . ')';
+        $error = 'Google लॉगिन अयशस्वी. कृपया पुन्हा प्रयत्न करा.';
         $action = 'login_view';
     }
 }
 
-// --------------------------------------------------------------------
-// 2. Normal Registration with Email & OTP
-// --------------------------------------------------------------------
+// Normal Registration
 if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $sessToken = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
-    $postToken = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
-
-    if ($sessToken !== $postToken) {
+    if (!Security::validateCsrfToken()) {
         $error = 'सुरक्षा पडताळणी अयशस्वी (Invalid CSRF Token)';
     } else {
-        $name  = trim(isset($_POST['name']) ? $_POST['name'] : '');
-        $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
-        $phone = trim(isset($_POST['phone']) ? $_POST['phone'] : '');
+        $name  = Security::sanitizeString(isset($_POST['name']) ? $_POST['name'] : '');
+        $email = Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
+        $phone = Security::sanitizeString(isset($_POST['phone']) ? $_POST['phone'] : '');
         $pass  = isset($_POST['password']) ? $_POST['password'] : '';
-        $crop  = trim(isset($_POST['crop']) ? $_POST['crop'] : 'कांदा (Onion)');
-        $lang  = isset($_POST['lang']) ? $_POST['lang'] : 'mr';
+        $crop  = Security::sanitizeString(isset($_POST['crop']) ? $_POST['crop'] : 'कांदा (Onion)');
+        $lang  = Security::sanitizeString(isset($_POST['lang']) ? $_POST['lang'] : 'mr');
 
         if (empty($name) || empty($email) || empty($pass)) {
             $error = 'कृपया सर्व आवश्यक माहिती भरा (Please fill all required fields)';
@@ -193,7 +173,7 @@ if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $chk = $pdo->prepare("SELECT id FROM `users` WHERE `email_hash` = ?");
                 $chk->execute(array($emailHash));
                 if ($chk->fetch()) {
-                    $error = 'हा ईमेल आधीच नोंदणीकृत आहे. कृपया लॉगिन करा. (Email already registered)';
+                    $error = 'हा ईमेल आधीच नोंदणीकृत आहे. कृपया लॉगिन करा.';
                 } else {
                     $otp = sprintf('%06d', mt_rand(100000, 999999));
                     $otpHash = HybridCrypto::blindIndex($email);
@@ -235,12 +215,10 @@ if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// --------------------------------------------------------------------
-// 3. Verify OTP & Finalize Registration
-// --------------------------------------------------------------------
+// Verify OTP
 if ($action === 'verify_otp_post' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
-    $otp   = trim(isset($_POST['otp']) ? $_POST['otp'] : '');
+    $email = Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
+    $otp   = Security::sanitizeString(isset($_POST['otp']) ? $_POST['otp'] : '');
 
     $pdo = Database::getConnection();
     $emailHash = HybridCrypto::blindIndex($email);
@@ -263,21 +241,34 @@ if ($action === 'verify_otp_post' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!empty($_SESSION['pending_reg'])) {
             $reg = $_SESSION['pending_reg'];
+            $newUserData = array(
+                'email_hash' => $emailHash,
+                'phone_hash' => HybridCrypto::blindIndex($reg['phone']),
+                'full_name' => HybridCrypto::encrypt($reg['name']),
+                'email' => HybridCrypto::encrypt($reg['email']),
+                'phone' => HybridCrypto::encrypt($reg['phone']),
+                'password_hash' => $reg['pass'],
+                'preferred_lang' => $reg['lang'],
+                'primary_crop' => HybridCrypto::encrypt($reg['crop']),
+                'farm_location' => HybridCrypto::encrypt('Kopargaon, Maharashtra'),
+            );
+            BlackoutEngine::recordMutation('users', 'INSERT', $newUserData);
+
             if ($pdo) {
                 $ins = $pdo->prepare("
                     INSERT INTO `users` (`email_hash`, `phone_hash`, `full_name`, `email`, `phone`, `password_hash`, `preferred_lang`, `primary_crop`, `farm_location`)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $ins->execute(array(
-                    $emailHash,
-                    HybridCrypto::blindIndex($reg['phone']),
-                    HybridCrypto::encrypt($reg['name']),
-                    HybridCrypto::encrypt($reg['email']),
-                    HybridCrypto::encrypt($reg['phone']),
-                    $reg['pass'],
-                    $reg['lang'],
-                    HybridCrypto::encrypt($reg['crop']),
-                    HybridCrypto::encrypt('Kopargaon, Maharashtra'),
+                    $newUserData['email_hash'],
+                    $newUserData['phone_hash'],
+                    $newUserData['full_name'],
+                    $newUserData['email'],
+                    $newUserData['phone'],
+                    $newUserData['password_hash'],
+                    $newUserData['preferred_lang'],
+                    $newUserData['primary_crop'],
+                    $newUserData['farm_location'],
                 ));
                 $userId = $pdo->lastInsertId();
                 $_SESSION['user_id'] = $userId;
@@ -300,26 +291,21 @@ if ($action === 'verify_otp_post' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $action = 'login_view';
         }
     } else {
-        $error = 'अवैध किंवा कालबाह्य झालेला OTP (Invalid or expired OTP)';
+        $error = 'अवैध किंवा कालबाह्य झालेला OTP (Invalid OTP)';
         $action = 'verify_otp';
     }
 }
 
-// --------------------------------------------------------------------
-// 4. Normal Email/Password Login
-// --------------------------------------------------------------------
+// Email Login
 if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $sessToken = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
-    $postToken = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
-
-    if ($sessToken !== $postToken) {
+    if (!Security::validateCsrfToken()) {
         $error = 'सुरक्षा पडताळणी अयशस्वी (Invalid CSRF Token)';
     } else {
-        $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
+        $email = Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
         $pass  = isset($_POST['password']) ? $_POST['password'] : '';
 
         if (empty($email) || empty($pass)) {
-            $error = 'कृपया ईमेल आणि पासवर्ड टाका (Please enter email & password)';
+            $error = 'कृपया ईमेल आणि पासवर्ड टाका';
         } else {
             $pdo = Database::getConnection();
             $emailHash = HybridCrypto::blindIndex($email);
@@ -341,10 +327,9 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: dashboard');
                     exit;
                 } else {
-                    $error = 'चुकीचा ईमेल किंवा पासवर्ड (Incorrect email or password)';
+                    $error = 'चुकीचा ईमेल किंवा पासवर्ड';
                 }
             } else {
-                // Demo fallback
                 $_SESSION['user_id'] = 1;
                 $_SESSION['user_name'] = 'Ramesh Patil (रमेश पाटील)';
                 $_SESSION['user_email'] = $email;
@@ -357,11 +342,9 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// --------------------------------------------------------------------
-// 5. Forgot Password Flow
-// --------------------------------------------------------------------
+// Forgot Password Flow
 if ($action === 'forgot_password_post' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim(isset($_POST['email']) ? $_POST['email'] : '');
+    $email = Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
     if (!empty($email)) {
         $otp = sprintf('%06d', mt_rand(100000, 999999));
         $pdo = Database::getConnection();
@@ -380,16 +363,14 @@ if ($action === 'forgot_password_post' && $_SERVER['REQUEST_METHOD'] === 'POST')
         $success = "तुमच्या ईमेलवर OTP पाठवला आहे. (OTP sent to {$email})";
         $action = 'reset_password_view';
     } else {
-        $error = 'कृपया ईमेल प्रविष्ट करा (Please enter your email)';
+        $error = 'कृपया ईमेल प्रविष्ट करा';
     }
 }
 
-// --------------------------------------------------------------------
-// 6. Reset Password with OTP
-// --------------------------------------------------------------------
+// Reset Password with OTP
 if ($action === 'reset_password_submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email   = isset($_SESSION['reset_email']) ? $_SESSION['reset_email'] : trim(isset($_POST['email']) ? $_POST['email'] : '');
-    $otp     = trim(isset($_POST['otp']) ? $_POST['otp'] : '');
+    $email   = isset($_SESSION['reset_email']) ? $_SESSION['reset_email'] : Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
+    $otp     = Security::sanitizeString(isset($_POST['otp']) ? $_POST['otp'] : '');
     $newPass = isset($_POST['new_password']) ? $_POST['new_password'] : '';
 
     $pdo = Database::getConnection();
@@ -417,14 +398,12 @@ if ($action === 'reset_password_submit' && $_SERVER['REQUEST_METHOD'] === 'POST'
         $success = 'पासवर्ड यशस्वीरीत्या बदलला आहे! कृपया नवीन पासवर्डने लॉगिन करा.';
         $action = 'login_view';
     } else {
-        $error = 'अवैध किंवा कालबाह्य झालेला OTP (Invalid OTP)';
+        $error = 'अवैध किंवा कालबाह्य झालेला OTP';
         $action = 'reset_password_view';
     }
 }
 
-// --------------------------------------------------------------------
-// 7. Logout
-// --------------------------------------------------------------------
+// Logout
 if ($action === 'logout') {
     session_unset();
     session_destroy();
@@ -437,6 +416,7 @@ if ($action === 'logout') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= Security::getCsrfToken() ?>">
     <title><?= htmlspecialchars($config['app']['name']) ?> - <?= __t('nav_login') ?> / <?= __t('nav_register') ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -445,7 +425,6 @@ if ($action === 'logout') {
 </head>
 <body class="bg-gradient-to-br from-emerald-50 via-amber-50/40 to-green-100 min-h-screen text-slate-800 font-sans flex flex-col">
 
-    <!-- Top Language & Easy Mode Switcher Bar -->
     <header class="py-3 px-4 sm:px-8 border-b border-emerald-100 bg-white/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between shadow-sm">
         <a href="index" class="flex items-center gap-2">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-green-500 flex items-center justify-center text-white font-black text-xl shadow-md shadow-emerald-500/20">
@@ -457,7 +436,6 @@ if ($action === 'logout') {
             </div>
         </a>
 
-        <!-- Language Pill Switcher -->
         <div class="flex items-center gap-1.5 bg-emerald-100/70 p-1 rounded-full border border-emerald-200 text-xs font-semibold">
             <a href="?lang=mr&action=<?= htmlspecialchars($action) ?>" class="px-3 py-1 rounded-full transition <?= I18n::getLang() === 'mr' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-900 hover:bg-emerald-200/60' ?>">मराठी</a>
             <a href="?lang=hi&action=<?= htmlspecialchars($action) ?>" class="px-3 py-1 rounded-full transition <?= I18n::getLang() === 'hi' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-900 hover:bg-emerald-200/60' ?>">हिंदी</a>
@@ -465,11 +443,9 @@ if ($action === 'logout') {
         </div>
     </header>
 
-    <!-- Main Container -->
     <main class="flex-1 flex items-center justify-center p-4 sm:p-6">
         <div class="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-emerald-900/10 border border-emerald-100 overflow-hidden">
             
-            <!-- Banner Header -->
             <div class="bg-gradient-to-r from-emerald-600 via-emerald-700 to-green-600 p-6 text-white text-center relative overflow-hidden">
                 <div class="absolute -right-6 -bottom-6 opacity-20 text-8xl select-none">🌾</div>
                 <h2 class="text-2xl font-black mb-1">
@@ -488,18 +464,17 @@ if ($action === 'logout') {
 
             <div class="p-6 sm:p-8 space-y-6">
 
-                <!-- Alert Messages -->
                 <?php if (!empty($error)): ?>
                     <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3 shadow-sm">
                         <i data-lucide="alert-circle" class="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5"></i>
-                        <span><?= htmlspecialchars($error) ?></span>
+                        <span><?= Security::escape($error) ?></span>
                     </div>
                 <?php endif; ?>
 
                 <?php if (!empty($success)): ?>
                     <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-3 shadow-sm">
                         <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5"></i>
-                        <span><?= htmlspecialchars($success) ?></span>
+                        <span><?= Security::escape($success) ?></span>
                     </div>
                 <?php endif; ?>
 
@@ -510,10 +485,9 @@ if ($action === 'logout') {
                     </div>
                 <?php endif; ?>
 
-                <!-- 1. LOGIN VIEW -->
+                <!-- Login View -->
                 <?php if ($action === 'login_view' || empty($action)): ?>
                     
-                    <!-- 1-Click Google OAuth Button -->
                     <a href="auth?action=google_login" class="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl shadow-sm text-slate-700 font-bold transition transform active:scale-[0.98] group">
                         <svg class="w-5 h-5" viewBox="0 0 24 24">
                             <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.4 9 5 12 5z"/>
@@ -531,7 +505,7 @@ if ($action === 'logout') {
                     </div>
 
                     <form action="auth?action=login" method="POST" class="space-y-4">
-                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                        <?= Security::csrfField() ?>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">ईमेल पत्ता किंवा मोबाईल (Email)</label>
@@ -563,11 +537,11 @@ if ($action === 'logout') {
                         <a href="auth?action=register_view" class="text-emerald-700 font-bold hover:underline">नवीन नोंदणी करा (Register)</a>
                     </div>
 
-                <!-- 2. REGISTER VIEW -->
+                <!-- Register View -->
                 <?php elseif ($action === 'register_view'): ?>
                     
                     <form action="auth?action=register" method="POST" class="space-y-3.5">
-                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                        <?= Security::csrfField() ?>
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">शेतकऱ्याचे संपूर्ण नाव (Farmer Name)</label>
@@ -622,12 +596,13 @@ if ($action === 'logout') {
                         <a href="auth?action=login_view" class="text-emerald-700 font-bold hover:underline">लॉगिन करा (Login)</a>
                     </div>
 
-                <!-- 3. VERIFY OTP VIEW -->
+                <!-- Verify OTP View -->
                 <?php elseif ($action === 'verify_otp'): ?>
                     <?php 
                         $verifyEmail = isset($_GET['email']) ? $_GET['email'] : (isset($_SESSION['pending_reg']['email']) ? $_SESSION['pending_reg']['email'] : '');
                     ?>
                     <form action="auth?action=verify_otp_post" method="POST" class="space-y-4 text-center">
+                        <?= Security::csrfField() ?>
                         <input type="hidden" name="email" value="<?= htmlspecialchars($verifyEmail) ?>">
                         
                         <p class="text-sm text-slate-600">
@@ -643,10 +618,11 @@ if ($action === 'logout') {
                         </button>
                     </form>
 
-                <!-- 4. FORGOT PASSWORD VIEW -->
+                <!-- Forgot Password View -->
                 <?php elseif ($action === 'forgot_password_view'): ?>
                     
                     <form action="auth?action=forgot_password_post" method="POST" class="space-y-4">
+                        <?= Security::csrfField() ?>
                         <p class="text-sm text-slate-600">
                             तुमचा नोंदणीकृत ईमेल प्रविष्ट करा, आम्ही पासवर्ड रीसेट करण्यासाठी OTP पाठवू.
                         </p>
@@ -661,12 +637,13 @@ if ($action === 'logout') {
                         </button>
                     </form>
 
-                <!-- 5. RESET PASSWORD VIEW -->
+                <!-- Reset Password View -->
                 <?php elseif ($action === 'reset_password_view'): ?>
                     <?php 
                         $resEmail = isset($_SESSION['reset_email']) ? $_SESSION['reset_email'] : '';
                     ?>
                     <form action="auth?action=reset_password_submit" method="POST" class="space-y-4">
+                        <?= Security::csrfField() ?>
                         <input type="hidden" name="email" value="<?= htmlspecialchars($resEmail) ?>">
 
                         <div>
@@ -690,7 +667,6 @@ if ($action === 'logout') {
         </div>
     </main>
 
-    <!-- Simple Footer -->
     <footer class="py-4 text-center text-xs text-slate-500 border-t border-emerald-100 bg-white/50">
         <?= htmlspecialchars($config['app']['footer_text']) ?>
     </footer>

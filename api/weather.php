@@ -1,20 +1,12 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Live Weather Intelligence API
- * ====================================================================
- * Free API: Open-Meteo (No API Key Required)
- * Parameters: Latitude, Longitude, Hourly & 7-Day Agricultural Forecast
- */
-
 header('Content-Type: application/json; charset=UTF-8');
 define('FASAL_ROOT', dirname(__DIR__));
 $config = require __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/security.php';
 
 $lat = (float)(isset($_GET['lat']) ? $_GET['lat'] : $config['farm_location']['latitude']);
 $lon = (float)(isset($_GET['lon']) ? $_GET['lon'] : $config['farm_location']['longitude']);
 
-// Build Open-Meteo query
 $weatherUrl = "https://api.open-meteo.com/v1/forecast?latitude={$lat}&longitude={$lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=Asia%2FKolkata&forecast_days=7";
 
 $ch = curl_init($weatherUrl);
@@ -31,7 +23,6 @@ if ($httpCode === 200 && !empty($response)) {
         $cur = $data['current'];
         $daily = isset($data['daily']) ? $data['daily'] : array();
 
-        // Determine weather description & icon
         $wCode = isset($cur['weather_code']) ? $cur['weather_code'] : 0;
         $conditionText = 'स्वच्छ आकाश (Clear Sky)';
         $icon = 'sun';
@@ -67,7 +58,6 @@ if ($httpCode === 200 && !empty($response)) {
     }
 }
 
-// Fallback if network is constrained
 echo json_encode(array(
     'success' => true,
     'source'  => 'Local Simulated Forecast',

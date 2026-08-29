@@ -1,10 +1,4 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Government Schemes & Subsidies Portal
- * ====================================================================
- */
-
 define('FASAL_ROOT', __DIR__);
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
@@ -57,7 +51,6 @@ $schemes = [
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1">
     
-    <!-- Top Hero Banner -->
     <div class="bg-gradient-to-r from-teal-700 via-emerald-800 to-green-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-teal-950/15 relative overflow-hidden">
         <div class="absolute -right-8 -bottom-8 opacity-20 text-9xl select-none">🏛️</div>
         
@@ -83,24 +76,24 @@ $schemes = [
                 <div class="space-y-3">
                     <div class="flex items-start justify-between gap-2">
                         <span class="text-xs font-bold text-teal-800 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
-                            <?= htmlspecialchars($s['dept']) ?>
+                            <?= Security::escape($s['dept']) ?>
                         </span>
                         <span class="px-2.5 py-0.5 bg-amber-100 text-amber-900 font-extrabold text-[10px] rounded-full uppercase">
-                            <?= htmlspecialchars($s['badge']) ?>
+                            <?= Security::escape($s['badge']) ?>
                         </span>
                     </div>
 
                     <h3 class="text-lg font-black text-slate-900 leading-snug">
-                        <?= htmlspecialchars($s['title']) ?>
+                        <?= Security::escape($s['title']) ?>
                     </h3>
 
                     <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-950 text-xs font-bold">
-                        🎁 फायदा: <?= htmlspecialchars($s['benefit']) ?>
+                        🎁 फायदा: <?= Security::escape($s['benefit']) ?>
                     </div>
 
                     <div class="space-y-1 text-xs text-slate-600">
-                        <p><strong>पात्रता:</strong> <?= htmlspecialchars($s['eligibility']) ?></p>
-                        <p class="text-amber-800 font-semibold"><strong>मुदत:</strong> <?= htmlspecialchars($s['deadline']) ?></p>
+                        <p><strong>पात्रता:</strong> <?= Security::escape($s['eligibility']) ?></p>
+                        <p class="text-amber-800 font-semibold"><strong>मुदत:</strong> <?= Security::escape($s['deadline']) ?></p>
                     </div>
                 </div>
 

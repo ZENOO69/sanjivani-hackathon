@@ -1,10 +1,4 @@
 <?php
-/**
- * ====================================================================
- * FASAL - AI Crop Doctor & Pest Diagnosis Engine (Google Gemini AI)
- * ====================================================================
- */
-
 define('FASAL_ROOT', __DIR__);
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
@@ -14,7 +8,6 @@ require_once __DIR__ . '/includes/header.php';
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1">
     
-    <!-- Top Hero Banner -->
     <div class="bg-gradient-to-r from-purple-700 via-indigo-800 to-emerald-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-950/15 relative overflow-hidden">
         <div class="absolute -right-8 -bottom-8 opacity-20 text-9xl select-none">🔬</div>
         
@@ -34,7 +27,6 @@ require_once __DIR__ . '/includes/header.php';
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <!-- Left: Query Input Form & Quick Symptoms -->
         <div class="lg:col-span-6 space-y-6">
             <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6">
                 
@@ -44,8 +36,6 @@ require_once __DIR__ . '/includes/header.php';
                 </h2>
 
                 <form id="ai-query-form" class="space-y-4">
-                    
-                    <!-- Crop Selection -->
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">पीक निवडा (Select Crop)</label>
                         <select id="ai-crop" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-purple-500 focus:outline-none">
@@ -59,13 +49,11 @@ require_once __DIR__ . '/includes/header.php';
                         </select>
                     </div>
 
-                    <!-- Query Box -->
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">पिकाची लक्षणे (Describe Symptoms)</label>
                         <textarea id="ai-query-text" rows="4" required placeholder="<?= __t('ask_ai_placeholder') ?>" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none transition"></textarea>
                     </div>
 
-                    <!-- Voice Input Button & Submit -->
                     <div class="flex items-center gap-3">
                         <button type="button" id="voice-mic-btn" class="px-4 py-3.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-2xl font-bold text-xs flex items-center gap-2 transition" title="माईक द्वारे बोला">
                             <i data-lucide="mic" class="w-4 h-4 text-purple-600"></i>
@@ -77,10 +65,8 @@ require_once __DIR__ . '/includes/header.php';
                             <i data-lucide="sparkles" class="w-4 h-4"></i>
                         </button>
                     </div>
-
                 </form>
 
-                <!-- Quick Symptom Tags -->
                 <div class="pt-4 border-t border-slate-100 space-y-2">
                     <span class="text-xs font-bold text-slate-500 block">वारंवार येणाऱ्या समस्या (Quick Click):</span>
                     <div class="flex flex-wrap gap-2">
@@ -102,7 +88,6 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
 
-        <!-- Right: AI Doctor Output Result & Voice Card -->
         <div class="lg:col-span-6 space-y-6">
             <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-6 min-h-[420px] flex flex-col justify-between" id="ai-response-container">
                 
@@ -117,7 +102,6 @@ require_once __DIR__ . '/includes/header.php';
                         </span>
                     </div>
 
-                    <!-- Output Area -->
                     <div id="ai-output-box" class="text-sm text-slate-800 leading-relaxed whitespace-pre-line bg-purple-50/40 p-5 rounded-2xl border border-purple-100/80">
                         🌿 <strong>नमस्कार शेतकरी मित्र!</strong><br><br>
                         डाव्या बाजूला तुमच्या पिकाची समस्या लिहा किंवा माईक द्वारे बोला. <br><br>
@@ -125,7 +109,6 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
 
-                <!-- Bottom Action Controls -->
                 <div id="ai-action-controls" class="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
                     <button id="ai-listen-btn" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition shadow-sm">
                         <i data-lucide="volume-2" class="w-4 h-4"></i>
@@ -151,12 +134,11 @@ require_once __DIR__ . '/includes/header.php';
         document.getElementById('ai-query-form').dispatchEvent(new Event('submit'));
     }
 
-    // Voice recognition (Web Speech API)
     const micBtn = document.getElementById('voice-mic-btn');
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRec();
-        recognition.lang = 'mr-IN'; // Marathi primary
+        recognition.lang = 'mr-IN';
         recognition.interimResults = false;
 
         micBtn.addEventListener('click', () => {
@@ -180,7 +162,6 @@ require_once __DIR__ . '/includes/header.php';
         micBtn.style.display = 'none';
     }
 
-    // Form Submission & API Call
     let currentRawResponse = "";
     document.getElementById('ai-query-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -202,7 +183,10 @@ require_once __DIR__ . '/includes/header.php';
         try {
             const res = await fetch('api/gemini-ai', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken()
+                },
                 body: JSON.stringify({ query, crop, lang: '<?= I18n::getLang() ?>' })
             });
             const data = await res.json();
@@ -223,7 +207,6 @@ require_once __DIR__ . '/includes/header.php';
         }
     });
 
-    // Audio Output Playback
     document.getElementById('ai-listen-btn').addEventListener('click', () => {
         if (!currentRawResponse) {
             currentRawResponse = document.getElementById('ai-output-box').innerText;

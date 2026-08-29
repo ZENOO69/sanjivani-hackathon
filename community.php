@@ -1,87 +1,93 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Farm Machinery & Labour Community Pool
- * ====================================================================
- */
-
 define('FASAL_ROOT', __DIR__);
 $config = require __DIR__ . '/config.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/includes/blackout_engine.php';
 require_once __DIR__ . '/includes/translations.php';
 require_once __DIR__ . '/includes/header.php';
 
 $pdo = Database::getConnection();
-
-// Handle New Machinery Listing Submission
 $msg = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_machinery') {
-    $eqName   = trim(isset($_POST['equipment_name']) ? $_POST['equipment_name'] : '');
-    $ownName  = trim(isset($_POST['owner_name']) ? $_POST['owner_name'] : '');
-    $ownPhone = trim(isset($_POST['owner_phone']) ? $_POST['owner_phone'] : '');
-    $loc      = trim(isset($_POST['location']) ? $_POST['location'] : '');
-    $rate     = trim(isset($_POST['hourly_rate']) ? $_POST['hourly_rate'] : '');
 
-    if (!empty($eqName) && !empty($ownName) && !empty($ownPhone) && $pdo) {
-        $ins = $pdo->prepare("
-            INSERT INTO `machinery_listings` (`equipment_name`, `owner_name`, `owner_phone`, `location`, `hourly_rate`, `status`)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $ins->execute(array(
-            HybridCrypto::encrypt($eqName),
-            HybridCrypto::encrypt($ownName),
-            HybridCrypto::encrypt($ownPhone),
-            HybridCrypto::encrypt($loc),
-            HybridCrypto::encrypt($rate),
-            HybridCrypto::encrypt('Available'),
-        ));
-        $msg = 'तुमचे अवजार यशस्वीरीत्या नोंदवले गेले आहे!';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_machinery') {
+    if (!Security::validateCsrfToken()) {
+        $msg = 'सुरक्षा पडताळणी अयशस्वी (Invalid CSRF Token)';
+    } else {
+        $eqName   = Security::sanitizeString(isset($_POST['equipment_name']) ? $_POST['equipment_name'] : '');
+        $ownName  = Security::sanitizeString(isset($_POST['owner_name']) ? $_POST['owner_name'] : '');
+        $ownPhone = Security::sanitizeString(isset($_POST['owner_phone']) ? $_POST['owner_phone'] : '');
+        $loc      = Security::sanitizeString(isset($_POST['location']) ? $_POST['location'] : '');
+        $rate     = Security::sanitizeString(isset($_POST['hourly_rate']) ? $_POST['hourly_rate'] : '');
+
+        if (!empty($eqName) && !empty($ownName) && !empty($ownPhone)) {
+            $recordData = array(
+                'equipment_name' => HybridCrypto::encrypt($eqName),
+                'owner_name'     => HybridCrypto::encrypt($ownName),
+                'owner_phone'    => HybridCrypto::encrypt($ownPhone),
+                'location'       => HybridCrypto::encrypt($loc),
+                'hourly_rate'    => HybridCrypto::encrypt($rate),
+                'status'         => HybridCrypto::encrypt('Available'),
+            );
+
+            // Record to Write-Ahead Journal first (WAL resilience)
+            BlackoutEngine::recordMutation('machinery_listings', 'INSERT', $recordData);
+
+            if ($pdo) {
+                try {
+                    $ins = $pdo->prepare("
+                        INSERT INTO `machinery_listings` (`equipment_name`, `owner_name`, `owner_phone`, `location`, `hourly_rate`, `status`)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ");
+                    $ins->execute(array(
+                        $recordData['equipment_name'],
+                        $recordData['owner_name'],
+                        $recordData['owner_phone'],
+                        $recordData['location'],
+                        $recordData['hourly_rate'],
+                        $recordData['status'],
+                    ));
+                } catch (Exception $e) {}
+            }
+            $msg = 'तुमचे अवजार यशस्वीरीत्या नोंदवले गेले आहे!';
+        }
     }
 }
 
-// Fetch Machinery Listings
+// Fetch Machinery Listings with HA failover
+$rawMachinery = BlackoutEngine::safeFetchAll('machinery_listings');
 $machineryList = array();
-if ($pdo) {
-    try {
-        $stmt = $pdo->query("SELECT * FROM `machinery_listings` ORDER BY id DESC");
-        while ($r = $stmt->fetch()) {
-            $machineryList[] = array(
-                'id'       => $r['id'],
-                'name'     => HybridCrypto::decrypt($r['equipment_name']),
-                'owner'    => HybridCrypto::decrypt($r['owner_name']),
-                'phone'    => HybridCrypto::decrypt($r['owner_phone']),
-                'location' => HybridCrypto::decrypt($r['location']),
-                'rate'     => HybridCrypto::decrypt($r['hourly_rate']),
-                'status'   => HybridCrypto::decrypt($r['status']),
-            );
-        }
-    } catch (Exception $e) {}
+foreach ($rawMachinery as $r) {
+    $machineryList[] = array(
+        'id'       => $r['id'],
+        'name'     => HybridCrypto::decrypt($r['equipment_name']),
+        'owner'    => HybridCrypto::decrypt($r['owner_name']),
+        'phone'    => HybridCrypto::decrypt($r['owner_phone']),
+        'location' => HybridCrypto::decrypt($r['location']),
+        'rate'     => HybridCrypto::decrypt($r['hourly_rate']),
+        'status'   => HybridCrypto::decrypt($r['status']),
+    );
 }
 
-// Fetch Labour Listings
+// Fetch Labour Listings with HA failover
+$rawLabour = BlackoutEngine::safeFetchAll('labour_listings');
 $labourList = array();
-if ($pdo) {
-    try {
-        $lStmt = $pdo->query("SELECT * FROM `labour_listings` ORDER BY id DESC");
-        while ($r = $lStmt->fetch()) {
-            $labourList[] = array(
-                'id'        => $r['id'],
-                'group'     => HybridCrypto::decrypt($r['group_name']),
-                'leader'    => HybridCrypto::decrypt($r['leader_name']),
-                'phone'     => HybridCrypto::decrypt($r['leader_phone']),
-                'count'     => HybridCrypto::decrypt($r['worker_count']),
-                'specialty' => HybridCrypto::decrypt($r['specialty']),
-                'wage'      => HybridCrypto::decrypt($r['daily_wage']),
-                'location'  => HybridCrypto::decrypt($r['location']),
-            );
-        }
-    } catch (Exception $e) {}
+foreach ($rawLabour as $r) {
+    $labourList[] = array(
+        'id'        => $r['id'],
+        'group'     => HybridCrypto::decrypt($r['group_name']),
+        'leader'    => HybridCrypto::decrypt($r['leader_name']),
+        'phone'     => HybridCrypto::decrypt($r['leader_phone']),
+        'count'     => HybridCrypto::decrypt($r['worker_count']),
+        'specialty' => HybridCrypto::decrypt($r['specialty']),
+        'wage'      => HybridCrypto::decrypt($r['daily_wage']),
+        'location'  => HybridCrypto::decrypt($r['location']),
+    );
 }
 ?>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 flex-1">
     
-    <!-- Top Hero Banner -->
     <div class="bg-gradient-to-r from-orange-600 via-amber-700 to-emerald-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-orange-950/15 relative overflow-hidden">
         <div class="absolute -right-8 -bottom-8 opacity-20 text-9xl select-none">🚜</div>
         
@@ -102,11 +108,11 @@ if ($pdo) {
     <?php if (!empty($msg)): ?>
         <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 font-bold text-sm flex items-center gap-2">
             <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
-            <span><?= htmlspecialchars($msg) ?></span>
+            <span><?= Security::escape($msg) ?></span>
         </div>
     <?php endif; ?>
 
-    <!-- 1. MACHINERY SECTION -->
+    <!-- Machinery Section -->
     <div class="space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -126,19 +132,19 @@ if ($pdo) {
                         <div class="flex items-start justify-between">
                             <span class="text-xs font-bold text-slate-500 flex items-center gap-1">
                                 <i data-lucide="map-pin" class="w-3.5 h-3.5 text-orange-600"></i>
-                                <span><?= htmlspecialchars($m['location']) ?></span>
+                                <span><?= Security::escape($m['location']) ?></span>
                             </span>
                             <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full uppercase">
-                                <?= htmlspecialchars($m['status']) ?>
+                                <?= Security::escape($m['status']) ?>
                             </span>
                         </div>
-                        <h3 class="text-base font-black text-slate-900 leading-snug"><?= htmlspecialchars($m['name']) ?></h3>
-                        <p class="text-xs text-slate-600">मालक: <strong><?= htmlspecialchars($m['owner']) ?></strong></p>
-                        <div class="text-lg font-black text-emerald-800 pt-1"><?= htmlspecialchars($m['rate']) ?></div>
+                        <h3 class="text-base font-black text-slate-900 leading-snug"><?= Security::escape($m['name']) ?></h3>
+                        <p class="text-xs text-slate-600">मालक: <strong><?= Security::escape($m['owner']) ?></strong></p>
+                        <div class="text-lg font-black text-emerald-800 pt-1"><?= Security::escape($m['rate']) ?></div>
                     </div>
 
                     <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs font-bold">
-                        <a href="tel:<?= htmlspecialchars($m['phone']) ?>" class="py-2.5 bg-emerald-600 text-white rounded-xl text-center hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <a href="tel:<?= Security::escape($m['phone']) ?>" class="py-2.5 bg-emerald-600 text-white rounded-xl text-center hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 shadow-sm">
                             <i data-lucide="phone" class="w-4 h-4"></i>
                             <span>कॉल करा</span>
                         </a>
@@ -152,7 +158,7 @@ if ($pdo) {
         </div>
     </div>
 
-    <!-- 2. LABOUR POOL SECTION -->
+    <!-- Labour Pool Section -->
     <div class="space-y-4 pt-6">
         <div>
             <h2 class="text-xl sm:text-2xl font-black text-slate-900"><?= __t('book_labour') ?></h2>
@@ -166,20 +172,20 @@ if ($pdo) {
                         <div class="flex items-start justify-between">
                             <span class="text-xs font-bold text-slate-500 flex items-center gap-1">
                                 <i data-lucide="map-pin" class="w-3.5 h-3.5 text-orange-600"></i>
-                                <span><?= htmlspecialchars($l['location']) ?></span>
+                                <span><?= Security::escape($l['location']) ?></span>
                             </span>
                             <span class="px-2.5 py-0.5 bg-orange-100 text-orange-800 text-[10px] font-black rounded-full">
-                                <?= htmlspecialchars($l['count']) ?>
+                                <?= Security::escape($l['count']) ?>
                             </span>
                         </div>
-                        <h3 class="text-base font-black text-slate-900 leading-snug"><?= htmlspecialchars($l['group']) ?></h3>
-                        <p class="text-xs text-slate-600">प्रमुख: <strong><?= htmlspecialchars($l['leader']) ?></strong></p>
-                        <p class="text-xs text-amber-900 bg-amber-50 p-2 rounded-xl border border-amber-200/60 font-semibold">काम: <?= htmlspecialchars($l['specialty']) ?></p>
-                        <div class="text-base font-black text-emerald-800 pt-1"><?= htmlspecialchars($l['wage']) ?></div>
+                        <h3 class="text-base font-black text-slate-900 leading-snug"><?= Security::escape($l['group']) ?></h3>
+                        <p class="text-xs text-slate-600">प्रमुख: <strong><?= Security::escape($l['leader']) ?></strong></p>
+                        <p class="text-xs text-amber-900 bg-amber-50 p-2 rounded-xl border border-amber-200/60 font-semibold">काम: <?= Security::escape($l['specialty']) ?></p>
+                        <div class="text-base font-black text-emerald-800 pt-1"><?= Security::escape($l['wage']) ?></div>
                     </div>
 
                     <div class="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs font-bold">
-                        <a href="tel:<?= htmlspecialchars($l['phone']) ?>" class="py-2.5 bg-emerald-600 text-white rounded-xl text-center hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <a href="tel:<?= Security::escape($l['phone']) ?>" class="py-2.5 bg-emerald-600 text-white rounded-xl text-center hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 shadow-sm">
                             <i data-lucide="phone" class="w-4 h-4"></i>
                             <span>कॉल करा</span>
                         </a>
@@ -207,6 +213,7 @@ if ($pdo) {
 
         <form action="community" method="POST" class="space-y-4">
             <input type="hidden" name="action" value="add_machinery">
+            <?= Security::csrfField() ?>
 
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">अवजाराचे नाव (उदा. महिंद्रा ५७५ ट्रॅक्टर + कल्टीव्हेटर)</label>

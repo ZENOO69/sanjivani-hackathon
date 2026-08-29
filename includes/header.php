@@ -1,19 +1,15 @@
 <?php
-/**
- * ====================================================================
- * FASAL - Shared Header & Live Mandi Ticker
- * ====================================================================
- */
-
 if (!defined('FASAL_ROOT')) {
     define('FASAL_ROOT', dirname(__DIR__));
 }
 
 $config = isset($GLOBALS['FASAL_CONFIG']) ? $GLOBALS['FASAL_CONFIG'] : require __DIR__ . '/../config.php';
 require_once __DIR__ . '/../database.php';
+require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/backup.php';
+require_once __DIR__ . '/blackout_engine.php';
 require_once __DIR__ . '/translations.php';
 
-// Fetch Live Mandi ticker data
 $pdo = Database::getConnection();
 $tickerItems = array();
 if ($pdo) {
@@ -29,11 +25,10 @@ if ($pdo) {
             );
         }
     } catch (Exception $e) {
-        // Fallback
+        $tickerItems = array();
     }
 }
 
-// Current logged in user info
 $isLoggedIn = !empty($_SESSION['user_id']);
 $userName = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'शेतकरी मित्र (Farmer)';
 $userCrop = isset($_SESSION['primary_crop']) ? $_SESSION['primary_crop'] : 'कांदा (Onion)';
@@ -44,73 +39,72 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= Security::getCsrfToken() ?>">
     <title><?= htmlspecialchars($config['app']['name']) ?> - <?= htmlspecialchars($config['app']['tagline']) ?></title>
+    <meta name="description" content="FASAL: Unified Farmer Decision-Intelligence & Advisory Platform. Live Weather, IoT Soil Telemetry, Mandi Rates, and Gemini AI Crop Doctor.">
     
-    <!-- Meta SEO -->
-    <meta name="description" content="FASAL: Unified Farmer Decision-Intelligence & Advisory Platform for Maharashtra Farmers. Live Weather, IoT Soil Telemetry, Mandi Rates, and Gemini AI Crop Doctor.">
-    
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons & Chart.js -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Custom Styles -->
     <link rel="stylesheet" href="assets/css/custom.css">
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased">
 
-    <!-- 1. TOP LIVE APMC MANDI TICKER MARQUEE (Prices for Maharashtra Farmers) -->
+    <!-- TOP LIVE APMC MANDI TICKER MARQUEE & BLACKOUT MONITOR -->
     <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 text-white text-xs py-2 px-4 border-b border-emerald-800/40 relative z-50">
-        <div class="max-w-7xl mx-auto flex items-center gap-3">
-            <div class="flex items-center gap-1.5 bg-emerald-700/80 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider flex-shrink-0 text-emerald-100 shadow-sm">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                <span><?= __t('mandi_live_rates') ?></span>
-            </div>
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 overflow-hidden flex-1">
+                <div class="flex items-center gap-1.5 bg-emerald-700/80 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider flex-shrink-0 text-emerald-100 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span><?= __t('mandi_live_rates') ?></span>
+                </div>
 
-            <!-- Continuous Smooth Marquee Ticker -->
-            <div class="marquee-container flex-1 overflow-hidden">
-                <div class="marquee-content gap-8 text-xs font-medium">
-                    <?php if (!empty($tickerItems)): ?>
-                        <?php foreach (array_merge($tickerItems, $tickerItems) as $item): ?>
-                            <div class="flex items-center gap-2">
-                                <span class="text-emerald-300 font-bold"><?= htmlspecialchars($item['name']) ?></span>
-                                <span class="text-slate-300">(<?= htmlspecialchars($item['market']) ?>):</span>
-                                <span class="font-extrabold text-amber-300">₹<?= htmlspecialchars($item['price']) ?>/Q</span>
-                                <?php if ($item['trend'] === 'up'): ?>
-                                    <span class="text-emerald-400 font-bold text-[11px] flex items-center">▲ <?= htmlspecialchars($item['percent']) ?></span>
-                                <?php elseif ($item['trend'] === 'down'): ?>
-                                    <span class="text-rose-400 font-bold text-[11px] flex items-center">▼ <?= htmlspecialchars($item['percent']) ?></span>
-                                <?php else: ?>
-                                    <span class="text-slate-400 font-bold text-[11px]">▬ 0.0%</span>
-                                <?php endif; ?>
+                <div class="marquee-container flex-1 overflow-hidden">
+                    <div class="marquee-content gap-8 text-xs font-medium">
+                        <?php if (!empty($tickerItems)): ?>
+                            <?php foreach (array_merge($tickerItems, $tickerItems) as $item): ?>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-emerald-300 font-bold"><?= htmlspecialchars($item['name']) ?></span>
+                                    <span class="text-slate-300">(<?= htmlspecialchars($item['market']) ?>):</span>
+                                    <span class="font-extrabold text-amber-300">₹<?= htmlspecialchars($item['price']) ?>/Q</span>
+                                    <?php if ($item['trend'] === 'up'): ?>
+                                        <span class="text-emerald-400 font-bold text-[11px] flex items-center">▲ <?= htmlspecialchars($item['percent']) ?></span>
+                                    <?php elseif ($item['trend'] === 'down'): ?>
+                                        <span class="text-rose-400 font-bold text-[11px] flex items-center">▼ <?= htmlspecialchars($item['percent']) ?></span>
+                                    <?php else: ?>
+                                        <span class="text-slate-400 font-bold text-[11px]">▬ 0.0%</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="flex items-center gap-6">
+                                <span>🌱 <strong>कापूस (Cotton - Kopargaon):</strong> ₹7,650/Q <span class="text-emerald-400">▲ +4.2%</span></span>
+                                <span>🧅 <strong>कांदा (Onion - Lasalgaon):</strong> ₹2,400/Q <span class="text-emerald-400">▲ +6.8%</span></span>
+                                <span>🍊 <strong>संत्रा (Orange - Nagpur):</strong> ₹4,800/Q <span class="text-emerald-400">▲ +2.5%</span></span>
+                                <span>🌾 <strong>सोयाबीन (Soybean - Latur):</strong> ₹4,750/Q <span class="text-rose-400">▼ -1.2%</span></span>
                             </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="flex items-center gap-6">
-                            <span>🌱 <strong>कापूस (Cotton - Kopargaon):</strong> ₹7,650/Q <span class="text-emerald-400">▲ +4.2%</span></span>
-                            <span>🧅 <strong>कांदा (Onion - Lasalgaon):</strong> ₹2,400/Q <span class="text-emerald-400">▲ +6.8%</span></span>
-                            <span>🍊 <strong>संत्रा (Orange - Nagpur):</strong> ₹4,800/Q <span class="text-emerald-400">▲ +2.5%</span></span>
-                            <span>🌾 <strong>सोयाबीन (Soybean - Latur):</strong> ₹4,750/Q <span class="text-rose-400">▼ -1.2%</span></span>
-                        </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
+
+            <!-- Blackout Simulation Quick Trigger -->
+            <button onclick="openBlackoutModal()" class="flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/90 hover:bg-rose-500 text-white font-black text-[10px] tracking-wide uppercase transition shadow-sm border border-rose-400/40 active:scale-95" title="The Blackout: Live Data Wipe & Self-Healing Resilience Test">
+                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                <span>⚡ The Blackout (Live Test)</span>
+            </button>
         </div>
     </div>
 
-    <!-- 2. MAIN APP NAVBAR -->
+    <!-- MAIN APP NAVBAR -->
     <header class="bg-white/95 backdrop-blur-md border-b border-emerald-100 sticky top-0 z-40 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16 sm:h-20">
                 
-                <!-- Logo & Brand -->
                 <div class="flex items-center gap-3">
                     <a href="index" class="flex items-center gap-2.5 group">
                         <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-green-600 to-amber-400 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-emerald-600/20 group-hover:scale-105 transition transform">
@@ -126,7 +120,6 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                     </a>
                 </div>
 
-                <!-- Desktop Navigation Links -->
                 <nav class="hidden md:flex items-center gap-1 text-sm font-bold text-slate-700">
                     <a href="dashboard" class="px-3.5 py-2 rounded-xl transition <?= in_array($currentPage, array('dashboard', '')) ? 'bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200' : 'hover:bg-slate-100 hover:text-emerald-700' ?>">
                         <?= __t('nav_dashboard') ?>
@@ -145,24 +138,19 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                     </a>
                 </nav>
 
-                <!-- Actions: Easy Mode Toggle + Language Pill + User Profile -->
                 <div class="flex items-center gap-2 sm:gap-3">
-                    
-                    <!-- Easy Mode Switcher -->
                     <button onclick="toggleEasyMode()" class="easy-mode-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 text-xs sm:text-sm font-bold bg-amber-50 text-amber-900 hover:bg-amber-100 transition shadow-sm" title="मोठा मजकूर / सुलभ शेतकरी मोड">
                         <i data-lucide="eye" class="w-4 h-4 text-amber-700"></i>
                         <span class="hidden sm:inline"><?= __t('easy_mode') ?></span>
                         <span class="sm:hidden">सुलभ</span>
                     </button>
 
-                    <!-- Language Switcher -->
                     <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
                         <a href="?lang=mr" class="px-2 py-1 rounded-lg transition <?= I18n::getLang() === 'mr' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:text-emerald-700' ?>">मराठी</a>
                         <a href="?lang=hi" class="px-2 py-1 rounded-lg transition <?= I18n::getLang() === 'hi' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:text-emerald-700' ?>">हिंदी</a>
                         <a href="?lang=en" class="px-2 py-1 rounded-lg transition <?= I18n::getLang() === 'en' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:text-emerald-700' ?>">EN</a>
                     </div>
 
-                    <!-- User Account / Login Button -->
                     <?php if ($isLoggedIn): ?>
                         <div class="relative group">
                             <a href="profile" class="flex items-center gap-2 pl-2 pr-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-2xl transition">
