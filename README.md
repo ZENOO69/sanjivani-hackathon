@@ -23,9 +23,3 @@ git clone https://github.com/ZENOO69/sanjivani-hackathon.git
 # Navigate to project directory
 cd sanjivani-hackathon
 ```
-
-## 👥 Contributors
-- Collaborators & Team Members
-
----
-*Built with ❤️ for Sanjivani Hackathon*
