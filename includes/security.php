@@ -27,8 +27,7 @@ class Security {
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: SAMEORIGIN');
         header('X-XSS-Protection: 1; mode=block');
-        header('Referrer-Policy: strict-origin-when-cross-origin');
-        header("Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net https://api.open-meteo.com https://generativelanguage.googleapis.com https://www.ashishvegan.com data: blob:;");
+        header("Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net https://api.open-meteo.com https://generativelanguage.googleapis.com https://www.ashishvegan.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://www.google.com data: blob:; frame-src 'self' https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/;");
     }
 
     // Resolve Client IP behind Proxies & Cloudflare
@@ -184,6 +183,70 @@ class Security {
     public static function sanitizeString($input) {
         $clean = strip_tags(trim((string)$input));
         return preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $clean);
+    }
+
+    // Get reCAPTCHA v3 Site Key
+    public static function getRecaptchaSiteKey() {
+        if (file_exists(FASAL_ROOT . '/config.php')) {
+            $config = require FASAL_ROOT . '/config.php';
+            if (!empty($config['recaptcha']['site_key']) && strpos($config['recaptcha']['site_key'], 'YOUR_RECAPTCHA') === false) {
+                return $config['recaptcha']['site_key'];
+            }
+        }
+        return '';
+    }
+
+    // Verify Google reCAPTCHA v3 Token (Challengeless Captcha)
+    public static function verifyRecaptcha($token, $expectedAction = 'submit') {
+        if (!file_exists(FASAL_ROOT . '/config.php')) {
+            return array('success' => true, 'score' => 1.0, 'is_mock' => true);
+        }
+
+        $config = require FASAL_ROOT . '/config.php';
+        $secretKey = isset($config['recaptcha']['secret_key']) ? $config['recaptcha']['secret_key'] : '';
+
+        // If no secret key is set or still placeholder, gracefully allow for offline testing
+        if (empty($secretKey) || strpos($secretKey, 'YOUR_RECAPTCHA') !== false) {
+            return array('success' => true, 'score' => 1.0, 'is_mock' => true);
+        }
+
+        if (empty($token)) {
+            return array('success' => false, 'error' => 'Missing reCAPTCHA token');
+        }
+
+        $url = 'https://www.google.com/recaptcha/api/siteverify';
+        $data = array(
+            'secret'   => $secretKey,
+            'response' => $token,
+            'remoteip' => self::getClientIp()
+        );
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200 && !empty($result)) {
+            $json = json_decode($result, true);
+            if (!empty($json['success'])) {
+                $minScore = isset($config['recaptcha']['min_score']) ? (float)$config['recaptcha']['min_score'] : 0.5;
+                $score = isset($json['score']) ? (float)$json['score'] : 1.0;
+                if ($score >= $minScore) {
+                    return array('success' => true, 'score' => $score, 'action' => isset($json['action']) ? $json['action'] : '');
+                } else {
+                    return array('success' => false, 'error' => 'Low bot confidence score: ' . $score, 'score' => $score);
+                }
+            } else {
+                return array('success' => false, 'error' => 'reCAPTCHA verification failed: ' . json_encode(isset($json['error-codes']) ? $json['error-codes'] : array()));
+            }
+        }
+
+        return array('success' => false, 'error' => 'Failed to reach reCAPTCHA verification server');
     }
 
     private static function readJsonFile($path) {

@@ -54,6 +54,28 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <?php $recaptchaSiteKey = Security::getRecaptchaSiteKey(); ?>
+    <?php if (!empty($recaptchaSiteKey)): ?>
+        <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($recaptchaSiteKey) ?>"></script>
+    <?php endif; ?>
+    <script>
+        window.RECAPTCHA_SITE_KEY = "<?= htmlspecialchars($recaptchaSiteKey) ?>";
+        function executeFasalRecaptcha(action, callback) {
+            if (window.RECAPTCHA_SITE_KEY && typeof grecaptcha !== 'undefined') {
+                grecaptcha.ready(function() {
+                    grecaptcha.execute(window.RECAPTCHA_SITE_KEY, { action: action }).then(function(token) {
+                        callback(token);
+                    }).catch(function(err) {
+                        console.warn('reCAPTCHA error:', err);
+                        callback('');
+                    });
+                });
+            } else {
+                callback('');
+            }
+        }
+    </script>
     <link rel="stylesheet" href="assets/css/custom.css">
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased">

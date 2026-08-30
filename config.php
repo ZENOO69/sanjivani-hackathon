@@ -91,4 +91,9 @@ return array(
         'nearby_markets'  => array('Rahata', 'Lasalgaon', 'Shrirampur', 'Yeola', 'Nashik', 'Nagpur', 'Akola'),
         'tracked_crops'   => array('Cotton (कापूस)', 'Onion (कांदा)', 'Oranges (संत्रा)', 'Sugarcane (ऊस)', 'Soybean (सोयाबीन)', 'Pomegranate (डाळिंब)', 'Wheat (गहू)', 'Maize (मका)'),
     ),
+    'recaptcha' => array(
+        'site_key'   => isset($env['recaptcha_site_key']) ? $env['recaptcha_site_key'] : '',
+        'secret_key' => isset($env['recaptcha_secret_key']) ? $env['recaptcha_secret_key'] : '',
+        'min_score'  => isset($env['recaptcha_min_score']) ? (float)$env['recaptcha_min_score'] : 0.5,
+    ),
 );

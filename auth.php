@@ -157,16 +157,21 @@ if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!Security::validateCsrfToken()) {
         $error = 'सुरक्षा पडताळणी अयशस्वी (Invalid CSRF Token)';
     } else {
-        $name  = Security::sanitizeString(isset($_POST['name']) ? $_POST['name'] : '');
-        $email = Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
-        $phone = Security::sanitizeString(isset($_POST['phone']) ? $_POST['phone'] : '');
-        $pass  = isset($_POST['password']) ? $_POST['password'] : '';
-        $crop  = Security::sanitizeString(isset($_POST['crop']) ? $_POST['crop'] : 'कांदा (Onion)');
-        $lang  = Security::sanitizeString(isset($_POST['lang']) ? $_POST['lang'] : 'mr');
-
-        if (empty($name) || empty($email) || empty($pass)) {
-            $error = 'कृपया सर्व आवश्यक माहिती भरा (Please fill all required fields)';
+        $recaptchaToken = isset($_POST['recaptcha_token']) ? $_POST['recaptcha_token'] : '';
+        $captchaRes = Security::verifyRecaptcha($recaptchaToken, 'register');
+        if (!$captchaRes['success']) {
+            $error = 'बॉट प्रतिबंधक सुरक्षा पडताळणी अयशस्वी (reCAPTCHA Verification Failed)';
         } else {
+            $name  = Security::sanitizeString(isset($_POST['name']) ? $_POST['name'] : '');
+            $email = Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
+            $phone = Security::sanitizeString(isset($_POST['phone']) ? $_POST['phone'] : '');
+            $pass  = isset($_POST['password']) ? $_POST['password'] : '';
+            $crop  = Security::sanitizeString(isset($_POST['crop']) ? $_POST['crop'] : 'कांदा (Onion)');
+            $lang  = Security::sanitizeString(isset($_POST['lang']) ? $_POST['lang'] : 'mr');
+
+            if (empty($name) || empty($email) || empty($pass)) {
+                $error = 'कृपया सर्व आवश्यक माहिती भरा (Please fill all required fields)';
+            } else {
             $pdo = Database::getConnection();
             $emailHash = HybridCrypto::blindIndex($email);
             if ($pdo) {
@@ -213,6 +218,7 @@ if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+}
 }
 
 // Verify OTP
@@ -301,12 +307,17 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!Security::validateCsrfToken()) {
         $error = 'सुरक्षा पडताळणी अयशस्वी (Invalid CSRF Token)';
     } else {
-        $email = Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
-        $pass  = isset($_POST['password']) ? $_POST['password'] : '';
-
-        if (empty($email) || empty($pass)) {
-            $error = 'कृपया ईमेल आणि पासवर्ड टाका';
+        $recaptchaToken = isset($_POST['recaptcha_token']) ? $_POST['recaptcha_token'] : '';
+        $captchaRes = Security::verifyRecaptcha($recaptchaToken, 'login');
+        if (!$captchaRes['success']) {
+            $error = 'बॉट प्रतिबंधक सुरक्षा पडताळणी अयशस्वी (reCAPTCHA Verification Failed)';
         } else {
+            $email = Security::sanitizeString(isset($_POST['email']) ? $_POST['email'] : '');
+            $pass  = isset($_POST['password']) ? $_POST['password'] : '';
+
+            if (empty($email) || empty($pass)) {
+                $error = 'कृपया ईमेल आणि पासवर्ड टाका';
+            } else {
             $pdo = Database::getConnection();
             $emailHash = HybridCrypto::blindIndex($email);
 
@@ -340,6 +351,7 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+}
 }
 
 // Forgot Password Flow
@@ -421,6 +433,27 @@ if ($action === 'logout') {
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <?php $recaptchaSiteKey = Security::getRecaptchaSiteKey(); ?>
+    <?php if (!empty($recaptchaSiteKey)): ?>
+        <script src="https://www.google.com/recaptcha/api.js?render=<?= htmlspecialchars($recaptchaSiteKey) ?>"></script>
+    <?php endif; ?>
+    <script>
+        window.RECAPTCHA_SITE_KEY = "<?= htmlspecialchars($recaptchaSiteKey) ?>";
+        function executeFasalRecaptcha(action, callback) {
+            if (window.RECAPTCHA_SITE_KEY && typeof grecaptcha !== 'undefined') {
+                grecaptcha.ready(function() {
+                    grecaptcha.execute(window.RECAPTCHA_SITE_KEY, { action: action }).then(function(token) {
+                        callback(token);
+                    }).catch(function(err) {
+                        console.warn('reCAPTCHA error:', err);
+                        callback('');
+                    });
+                });
+            } else {
+                callback('');
+            }
+        }
+    </script>
     <link rel="stylesheet" href="assets/css/custom.css">
 </head>
 <body class="bg-gradient-to-br from-emerald-50 via-amber-50/40 to-green-100 min-h-screen text-slate-800 font-sans flex flex-col">
@@ -675,6 +708,30 @@ if ($action === 'logout') {
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
+
+        // Automatic Google reCAPTCHA v3 Challengeless Execution
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                let tokenInput = this.querySelector('input[name="recaptcha_token"]');
+                if (!tokenInput) {
+                    tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = 'recaptcha_token';
+                    this.appendChild(tokenInput);
+                }
+
+                if (!tokenInput.value && window.RECAPTCHA_SITE_KEY) {
+                    e.preventDefault();
+                    const formAction = this.getAttribute('action') || '';
+                    const actionName = formAction.includes('register') ? 'register' : (formAction.includes('reset') ? 'reset_password' : 'login');
+                    
+                    executeFasalRecaptcha(actionName, function(token) {
+                        tokenInput.value = token;
+                        form.submit();
+                    });
+                }
+            });
+        });
     </script>
 </body>
 </html>
